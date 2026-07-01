@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -26,6 +29,7 @@ export default function LoginPage() {
 
     if (authError) {
       setError(authError.message);
+      toast.error(authError.message || "Could not log you in. Please try again.");
       setLoading(false);
       return;
     }
@@ -44,15 +48,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ background: "var(--color-bg-primary)" }}>
+    <div className="min-h-screen flex relative" style={{ background: "var(--color-bg-primary)" }}>
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
       {/* Left Side — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center p-12"
-        style={{ background: "linear-gradient(135deg, #05100a, #0a1f14)" }}>
+        style={{ background: "linear-gradient(135deg, var(--color-bg-secondary), var(--color-bg-tertiary))" }}>
         <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full opacity-30 blur-3xl" style={{ background: "#059669" }} />
         <div className="absolute bottom-1/4 right-1/4 w-56 h-56 rounded-full opacity-20 blur-3xl" style={{ background: "#06b6d4" }} />
         <div className="relative z-10 max-w-md">
           <div className="flex items-center gap-3 mb-8">
-            <Zap className="w-9 h-9 text-white" />
+            <Zap className="w-9 h-9" fill="currentColor" style={{ color: "var(--color-accent-primary)" }} />
             <span className="text-3xl font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
           </div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>Welcome back, achiever.</h2>
@@ -74,7 +81,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <Zap className="w-6 h-6 text-white" />
+            <Zap className="w-6 h-6" fill="currentColor" style={{ color: "var(--color-accent-primary)" }} />
             <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
           </div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>Log in to your account</h1>
@@ -121,9 +128,9 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3 mt-2" style={{ opacity: loading ? 0.7 : 1 }}>
-              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Log In <ArrowRight className="w-4 h-4" /></>}
-            </button>
+            <Button type="submit" variant="primary" loading={loading} className="w-full py-3 mt-2">
+              {!loading && <>Log In <ArrowRight className="w-4 h-4" /></>}
+            </Button>
           </form>
         </motion.div>
       </div>

@@ -2,32 +2,30 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Flame, CheckCircle2, ListTodo, TrendingUp, ArrowRight, Users, MessageSquare, Plus } from "lucide-react";
+import { Flame, CheckCircle2, ListTodo, TrendingUp, Users, MessageSquare, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/dal/auth";
 import { getDashboardStats } from "@/lib/dal/analytics";
 import { getHabits, toggleHabitCompletion } from "@/lib/dal/habits";
 import { getMyGroups } from "@/lib/dal/groups";
 import { getReports } from "@/lib/dal/reports";
 import type { User, DashboardStats, Habit, Group, DailyReport } from "@/lib/types";
+import { MOOD_EMOJIS } from "@/lib/constants";
+import { celebrate } from "@/lib/celebrate";
+import {
+  StatCard,
+  GlassCard,
+  SectionHeader,
+  Avatar,
+  CategoryIcon,
+  Badge,
+} from "@/components/ui";
+import { DashboardSkeleton } from "./skeleton";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] as const } }),
 };
-
-function ProgressRing({ value, max, size = 56, stroke = 5, color }: { value: number; max: number; size?: number; stroke?: number; color: string }) {
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = max > 0 ? (value / max) * circumference : 0;
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--color-bg-tertiary)" strokeWidth={stroke} />
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circumference} strokeDashoffset={circumference - progress} strokeLinecap="round"
-        className="transition-all duration-1000" style={{ transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)" }} />
-    </svg>
-  );
-}
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -54,6 +52,7 @@ export default function DashboardPage() {
         setRecentReports(currentReports.slice(0, 2));
       } catch (err) {
         console.error("Error loading dashboard data", err);
+        toast.error("Couldn't load your dashboard. Please refresh.");
       } finally {
         setLoading(false);
       }
@@ -61,16 +60,24 @@ export default function DashboardPage() {
     loadDashboardData();
   }, []);
 
-  const handleToggleHabit = async (habitId: string) => {
+  const handleToggleHabit = async (habitId: string, event: React.MouseEvent) => {
     try {
       const isCompleted = await toggleHabitCompletion(habitId);
-      // Update local state
+      const habit = habits.find((h) => h.id === habitId);
       setHabits(habits.map((h) => h.id === habitId ? { ...h, completed_today: isCompleted, streak: (h.streak || 0) + (isCompleted ? 1 : -1) } : h));
-      // Reload stats
       const newStats = await getDashboardStats();
       setStats(newStats);
+      if (isCompleted) {
+        // Celebrate from the click point.
+        celebrate({ x: event.clientX, y: event.clientY });
+        const newStreak = (habit?.streak || 0) + 1;
+        toast.success(
+          newStreak > 1 ? `${habit?.name} done — ${newStreak} day streak! 🔥` : `${habit?.name} completed! 🎉`
+        );
+      }
     } catch (err) {
       console.error("Failed to toggle habit completion", err);
+      toast.error("Couldn't update that habit. Try again.");
     }
   };
 
@@ -81,13 +88,7 @@ export default function DashboardPage() {
     return "Good evening";
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <DashboardSkeleton />;
 
   const activeStats = stats || {
     current_streak: 0,
@@ -111,150 +112,123 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {[
-          { label: "Current Streak", value: `${activeStats.current_streak} days`, icon: <Flame className="w-5 h-5" />, color: "#f97316", variant: "stat-card-orange", extra: <span className="streak-fire text-2xl ml-1">🔥</span> },
-          { label: "Habits Today", value: `${activeStats.habits_completed_today}/${activeStats.total_habits_today}`, icon: <CheckCircle2 className="w-5 h-5" />, color: "#059669", variant: "stat-card-green", ring: { v: activeStats.habits_completed_today, m: activeStats.total_habits_today, c: "#059669" } },
-          { label: "Tasks Done", value: `${activeStats.tasks_completed_today}/${activeStats.total_tasks_today}`, icon: <ListTodo className="w-5 h-5" />, color: "#3b82f6", variant: "stat-card-blue", ring: { v: activeStats.tasks_completed_today, m: activeStats.total_tasks_today, c: "#3b82f6" } },
-          { label: "Weekly Score", value: `${activeStats.weekly_consistency}%`, icon: <TrendingUp className="w-5 h-5" />, color: "#059669", variant: "stat-card-emerald" },
-        ].map((card, i) => (
-          <motion.div key={card.label} initial="hidden" animate="visible" variants={fadeUp} custom={i + 1}
-            className={`glass-card stat-card ${card.variant} p-6`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>{card.label}</p>
-                <div className="flex items-center">
-                  <span className="text-2xl font-bold" style={{ color: "var(--color-text-primary)" }}>{card.value}</span>
-                  {card.extra}
-                </div>
-              </div>
-              {card.ring ? (
-                <ProgressRing value={card.ring.v} max={card.ring.m} color={card.ring.c} />
-              ) : (
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${card.color}20`, color: card.color }}>
-                  {card.icon}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        ))}
+        <StatCard index={1} label="Current Streak" value={activeStats.current_streak} suffix=" days" color="#f97316" accent="orange"
+          icon={<Flame className="w-5 h-5" />} extra={<span className="streak-fire text-2xl ml-1">🔥</span>} />
+        <StatCard index={2} label="Habits Today" value={activeStats.habits_completed_today} color="#059669" accent="green"
+          icon={<CheckCircle2 className="w-5 h-5" />} suffix={`/${activeStats.total_habits_today}`}
+          ring={{ value: activeStats.habits_completed_today, max: activeStats.total_habits_today, color: "#059669" }} />
+        <StatCard index={3} label="Tasks Done" value={activeStats.tasks_completed_today} color="#3b82f6" accent="blue"
+          icon={<ListTodo className="w-5 h-5" />} suffix={`/${activeStats.total_tasks_today}`}
+          ring={{ value: activeStats.tasks_completed_today, max: activeStats.total_tasks_today, color: "#3b82f6" }} />
+        <StatCard index={4} label="Weekly Score" value={activeStats.weekly_consistency} suffix="%" color="#059669" accent="emerald"
+          icon={<TrendingUp className="w-5 h-5" />} />
       </div>
 
       {/* Main Grid */}
       <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Today's Habits */}
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5} className="lg:col-span-2 glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>Today&apos;s Habits</h2>
-            <Link href="/habits" className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--color-accent-primary)" }}>
-              View all <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          {habits.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>No habits tracked today.</p>
-              <Link href="/habits/create" className="btn-primary inline-flex gap-2">
-                <Plus className="w-4 h-4" /> Create Habit
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5} className="lg:col-span-2">
+          <GlassCard className="p-6 h-full">
+            <SectionHeader title="Today's Habits" link={{ label: "View all", href: "/habits" }} />
+            {habits.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>No habits tracked today.</p>
+                <Link href="/habits/create" className="btn-primary inline-flex gap-2">
+                  <Plus className="w-4 h-4" /> Create Habit
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {habits.map((habit) => (
+                  <button key={habit.id} type="button"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left hover:scale-[1.01]"
+                    onClick={(e) => handleToggleHabit(habit.id, e)}
+                    aria-pressed={habit.completed_today}
+                    aria-label={`${habit.completed_today ? "Mark incomplete" : "Mark complete"}: ${habit.name}`}
+                    style={{ background: habit.completed_today ? "var(--color-success-soft)" : "var(--color-bg-tertiary)" }}>
+                    <span className="text-lg" aria-hidden>{habit.icon}</span>
+                    <span className="flex-1 text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{habit.name}</span>
+                    {habit.streak && habit.streak > 0 && (
+                      <Badge variant="warning">🔥 {habit.streak}d</Badge>
+                    )}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${habit.completed_today ? "" : "border-2"}`}
+                      style={habit.completed_today ? { background: "var(--color-success)", color: "white" } : { borderColor: "var(--color-border-default)" }}>
+                      {habit.completed_today && <CheckCircle2 className="w-4 h-4" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </motion.div>
+
+        {/* Active Groups */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}>
+          <GlassCard className="p-6 h-full">
+            <SectionHeader title="Active Groups" link={{ label: "View all", href: "/groups" }} />
+            <div className="space-y-3">
+              {groups.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-sm mb-3" style={{ color: "var(--color-text-muted)" }}>Not in any groups yet.</p>
+                  <Link href="/groups" className="btn-secondary text-xs inline-block">Explore Groups</Link>
+                </div>
+              ) : (
+                groups.map((group) => (
+                  <Link key={group.id} href={`/groups/${group.id}`} className="block p-3 rounded-xl transition-colors"
+                    style={{ background: "var(--color-bg-tertiary)" }}>
+                    <div className="flex items-center gap-3">
+                      <CategoryIcon category={group.category} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{group.name}</div>
+                        <div className="text-xs flex items-center gap-1" style={{ color: "var(--color-text-muted)" }}>
+                          <Users className="w-3 h-3" /> {group.member_count} members
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
+              <Link href="/groups/create" className="flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors"
+                style={{ border: "1px dashed var(--color-border-default)", color: "var(--color-text-muted)" }}>
+                <Plus className="w-4 h-4" /> Create Group
               </Link>
             </div>
+          </GlassCard>
+        </motion.div>
+      </div>
+
+      {/* Recent Feedback */}
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7}>
+        <GlassCard className="p-6">
+          <SectionHeader title="Recent Activity" link={{ label: "View all", href: "/reviews" }} />
+          {recentReports.length === 0 ? (
+            <div className="text-center py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
+              No recent daily reports in your groups.
+            </div>
           ) : (
-            <div className="space-y-2">
-              {habits.map((habit) => (
-                <div key={habit.id} className="flex items-center gap-3 p-3 rounded-xl transition-colors cursor-pointer"
-                  onClick={() => handleToggleHabit(habit.id)}
-                  style={{ background: habit.completed_today ? "var(--color-success-soft)" : "var(--color-bg-tertiary)" }}>
-                  <span className="text-lg">{habit.icon}</span>
-                  <span className="flex-1 text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{habit.name}</span>
-                  {habit.streak && habit.streak > 0 && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "var(--color-warning-soft)", color: "var(--color-warning)" }}>
-                      🔥 {habit.streak}d
-                    </span>
-                  )}
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${habit.completed_today ? "" : "border-2"}`}
-                    style={habit.completed_today ? { background: "var(--color-success)", color: "white" } : { borderColor: "var(--color-border-default)" }}>
-                    {habit.completed_today && <CheckCircle2 className="w-4 h-4" />}
+            <div className="grid md:grid-cols-2 gap-4">
+              {recentReports.map((report) => (
+                <div key={report.id} className="p-4 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <Avatar src={report.user?.avatar_url} name={report.user?.full_name} size="md" />
+                    <div>
+                      <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{report.user?.full_name}</div>
+                      <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                        {report.hours_worked}h worked • Mood: {MOOD_EMOJIS[report.mood_rating]?.emoji}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>{report.notes}</p>
+                  <div className="flex items-center gap-2 mt-3">
+                    <Link href="/reviews" className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--color-accent-primary)" }}>
+                      <MessageSquare className="w-3 h-3" /> Review
+                    </Link>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </motion.div>
-
-        {/* Active Groups */}
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>Active Groups</h2>
-            <Link href="/groups" className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--color-accent-primary)" }}>
-              View all <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {groups.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm mb-3" style={{ color: "var(--color-text-muted)" }}>Not in any groups yet.</p>
-                <Link href="/groups" className="btn-secondary text-xs inline-block">Explore Groups</Link>
-              </div>
-            ) : (
-              groups.map((group) => (
-                <Link key={group.id} href={`/groups/${group.id}`} className="block p-3 rounded-xl transition-colors"
-                  style={{ background: "var(--color-bg-tertiary)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                      style={{ background: `${group.category === "study" ? "#059669" : group.category === "coding" ? "#3b82f6" : group.category === "fitness" ? "#ef4444" : "#f59e0b"}20` }}>
-                      {group.category === "study" ? "📚" : group.category === "coding" ? "💻" : group.category === "fitness" ? "💪" : "🚀"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{group.name}</div>
-                      <div className="text-xs flex items-center gap-1" style={{ color: "var(--color-text-muted)" }}>
-                        <Users className="w-3 h-3" /> {group.member_count} members
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))
-            )}
-            <Link href="/groups/create" className="flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors"
-              style={{ border: "1px dashed var(--color-border-default)", color: "var(--color-text-muted)" }}>
-              <Plus className="w-4 h-4" /> Create Group
-            </Link>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Recent Feedback */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7} className="glass-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>Recent Activity</h2>
-          <Link href="/reviews" className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--color-accent-primary)" }}>
-            View all <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-        {recentReports.length === 0 ? (
-          <div className="text-center py-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            No recent daily reports in your groups.
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-4">
-            {recentReports.map((report) => (
-              <div key={report.id} className="p-4 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="avatar avatar-md" style={{ background: "linear-gradient(135deg, #059669, #06b6d4)", color: "white" }}>
-                    {report.user?.full_name?.[0] || "?"}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{report.user?.full_name}</div>
-                    <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>{report.hours_worked}h worked • Mood: {["😫", "😕", "😐", "😊", "🔥"][report.mood_rating - 1]}</div>
-                  </div>
-                </div>
-                <p className="text-sm leading-relaxed line-clamp-2" style={{ color: "var(--color-text-secondary)" }}>{report.notes}</p>
-                <div className="flex items-center gap-2 mt-3">
-                  <Link href="/reviews" className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--color-accent-primary)" }}>
-                    <MessageSquare className="w-3 h-3" /> Review
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        </GlassCard>
       </motion.div>
     </div>
   );

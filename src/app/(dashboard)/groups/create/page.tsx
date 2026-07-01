@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { GROUP_CATEGORIES } from "@/lib/constants";
+import { Spinner } from "@/components/ui";
 import { createGroup } from "@/lib/dal/groups";
 
 export default function CreateGroupPage() {
@@ -32,10 +34,12 @@ export default function CreateGroupPage() {
         category,
         is_public: isPublic,
       });
+      toast.success("Group created!");
       router.push(`/groups/${groupId}`);
     } catch (err) {
       console.error(err);
       setError("Failed to create group. Please try again.");
+      toast.error("Failed to create group. Please try again.");
       setLoading(false);
     }
   };
@@ -92,7 +96,7 @@ export default function CreateGroupPage() {
           <span className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{isPublic ? "Public group" : "Private (invite only)"}</span>
         </div>
         <button type="submit" disabled={loading} className="btn-primary w-full py-3" style={{ opacity: loading ? 0.7 : 1 }}>
-          {loading ? "Creating..." : "Create Group"}
+          {loading ? <><Spinner size="sm" onAccent /> Creating...</> : "Create Group"}
         </button>
       </motion.form>
     </div>

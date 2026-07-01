@@ -3,7 +3,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Zap, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -23,19 +26,24 @@ export default function ForgotPasswordPage() {
 
     if (resetError) {
       setError(resetError.message);
+      toast.error(resetError.message || "Could not send the reset link. Please try again.");
       setLoading(false);
       return;
     }
 
     setSent(true);
+    toast.success("Reset link sent! Check your email.");
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "var(--color-bg-primary)" }}>
+    <div className="min-h-screen flex items-center justify-center p-8 relative" style={{ background: "var(--color-bg-primary)" }}>
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <div className="flex items-center gap-2 mb-8">
-          <Zap className="w-6 h-6 text-white" />
+          <Zap className="w-6 h-6" fill="currentColor" style={{ color: "var(--color-accent-primary)" }} />
           <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
         </div>
         {sent ? (
@@ -70,9 +78,9 @@ export default function ForgotPasswordPage() {
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="input-field pl-10" required />
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-3" style={{ opacity: loading ? 0.7 : 1 }}>
-                {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Send Reset Link"}
-              </button>
+              <Button type="submit" variant="primary" loading={loading} className="w-full py-3">
+                {!loading && "Send Reset Link"}
+              </Button>
             </form>
             <Link href="/login" className="flex items-center gap-2 justify-center mt-6 text-sm font-medium" style={{ color: "var(--color-text-secondary)" }}>
               <ArrowLeft className="w-4 h-4" /> Back to login

@@ -5,9 +5,11 @@ import { Plus, Clock, CheckCircle2, MessageSquare, ThumbsUp } from "lucide-react
 import { useEffect, useState } from "react";
 import { getReports, addReaction, uploadAdditionalEvidence } from "@/lib/dal/reports";
 import { MOOD_EMOJIS } from "@/lib/constants";
-import type { DailyReport } from "@/lib/types";
+import type { DailyReport, Reaction } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
-import { ImageIcon, X } from "lucide-react";
+import { ImageIcon } from "lucide-react";
+import { PageSpinner, EmptyState, Avatar } from "@/components/ui";
+import { toast } from "sonner";
 
 export default function ProgressPage() {
   const [reports, setReports] = useState<DailyReport[]>([]);
@@ -26,6 +28,7 @@ export default function ProgressPage() {
         setReports(data);
       } catch (err) {
         console.error("Failed to load reports", err);
+        toast.error("Couldn't load progress reports. Please refresh.");
       } finally {
         setLoading(false);
       }
@@ -34,13 +37,43 @@ export default function ProgressPage() {
   }, []);
 
   const handleLike = async (reportId: string) => {
+    if (!currentUserId) return;
+    const report = reports.find((r) => r.id === reportId);
+    if (!report) return;
+    const hadLiked = (report.reactions || []).some(
+      (r) => r.reaction_type === "great_job" && r.user_id === currentUserId
+    );
+
+    // Optimistic toggle — update instantly, sync in the background.
+    const applyToggle = (list: DailyReport[], add: boolean) =>
+      list.map((r) => {
+        if (r.id !== reportId) return r;
+        const existing = r.reactions || [];
+        const reactions = add
+          ? [
+              ...existing,
+              {
+                id: `optimistic-${currentUserId}-great_job`,
+                report_id: reportId,
+                user_id: currentUserId,
+                reaction_type: "great_job",
+                created_at: new Date().toISOString(),
+              } as Reaction,
+            ]
+          : existing.filter(
+              (x) => !(x.user_id === currentUserId && x.reaction_type === "great_job")
+            );
+        return { ...r, reactions };
+      });
+
+    setReports((prev) => applyToggle(prev, !hadLiked));
+
     try {
       await addReaction(reportId, "great_job");
-      // Reload reports to show updated counts
-      const data = await getReports();
-      setReports(data);
     } catch (err) {
       console.error("Failed to like report", err);
+      setReports((prev) => applyToggle(prev, hadLiked));
+      toast.error("Couldn't react to this report. Please try again.");
     }
   };
 
@@ -51,19 +84,17 @@ export default function ProgressPage() {
       await uploadAdditionalEvidence(reportId, Array.from(files));
       const data = await getReports();
       setReports(data);
+      toast.success("Evidence added!");
     } catch (err) {
       console.error("Failed to upload evidence", err);
+      toast.error("Couldn't upload evidence. Please try again.");
     } finally {
       setUploadingEvidenceId(null);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (
@@ -78,33 +109,25 @@ export default function ProgressPage() {
 
       <div className="space-y-4">
         {reports.length === 0 ? (
-          <div className="glass-card p-12 text-center space-y-5">
-            <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center text-4xl" style={{ background: "rgba(5, 150, 105, 0.1)" }}>📈</div>
-            <h3 className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>No progress reports yet</h3>
-            <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--color-text-secondary)" }}>
-              Share what you worked on, log your productivity hours, checklist tasks, and receive feedback from group members.
-            </p>
-            <Link href="/progress/submit" className="btn-primary inline-flex gap-2"><Plus className="w-4 h-4" /> Submit First Report</Link>
-          </div>
+          <EmptyState
+            emoji="📈"
+            title="No progress reports yet"
+            description="Share what you worked on, log your productivity hours, checklist tasks, and receive feedback from group members."
+            action={{ label: "Submit First Report", href: "/progress/submit" }}
+          />
         ) : (
           reports.map((report, i) => {
             const mood = MOOD_EMOJIS[report.mood_rating] || { emoji: "😐", label: "Neutral" };
             const completedCount = report.tasks_completed.filter((t) => t.completed).length;
             const totalTasks = report.tasks_completed.length;
             // Count total thumbs up reactions
-            const likesCount = report.reactions?.filter((r: any) => r.reaction_type === "great_job").length || 0;
-            const hasLiked = report.reactions?.some((r: any) => r.reaction_type === "great_job" && r.user_id === currentUserId);
+            const likesCount = report.reactions?.filter((r) => r.reaction_type === "great_job").length || 0;
+            const hasLiked = report.reactions?.some((r) => r.reaction_type === "great_job" && r.user_id === currentUserId);
 
             return (
               <motion.div key={report.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="glass-card p-6">
                 <div className="flex items-start gap-4">
-                  {report.user?.avatar_url ? (
-                    <img src={report.user.avatar_url} alt={report.user.full_name} className="w-12 h-12 rounded-full object-cover" />
-                  ) : (
-                    <div className="avatar avatar-lg flex-shrink-0 font-semibold" style={{ background: `hsl(${(i * 73) % 360}, 60%, 50%)`, color: "white" }}>
-                      {report.user?.full_name?.[0]?.toUpperCase() || "?"}
-                    </div>
-                  )}
+                  <Avatar src={report.user?.avatar_url} name={report.user?.full_name} size="lg" className="flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>{report.user?.full_name}</span>
@@ -142,7 +165,7 @@ export default function ProgressPage() {
                                 <img src={ev.file_url} alt="Evidence" className="w-full h-full object-cover" />
                               </a>
                             ) : (
-                              <a href={ev.file_url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center bg-black/50 text-xs font-bold text-white text-center p-1">
+                              <a href={ev.file_url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center text-xs font-bold text-white text-center p-1" style={{ background: "var(--color-overlay)" }}>
                                 VIDEO
                               </a>
                             )}

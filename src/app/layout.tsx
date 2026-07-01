@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider, themeInitScript } from "@/lib/theme";
+import { ThemedToaster } from "@/components/themed-toaster";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,8 +29,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="font-sans">{children}</body>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        {/* Applies the saved/system theme before first paint (no flash) */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="font-sans">
+        <ThemeProvider>
+          {children}
+          <ThemedToaster />
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

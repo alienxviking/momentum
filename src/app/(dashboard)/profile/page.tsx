@@ -1,9 +1,11 @@
 "use client";
 import { motion } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
+import { toast } from "sonner";
 import { getCurrentUser, updateProfile, uploadAvatar } from "@/lib/dal/auth";
 import { getDashboardStats } from "@/lib/dal/analytics";
-import { Flame, Target, TrendingUp, Calendar, Camera, Loader2 } from "lucide-react";
+import { Flame, Target, TrendingUp, Calendar, Camera } from "lucide-react";
+import { PageSpinner, Spinner, Avatar } from "@/components/ui";
 import type { User, DashboardStats } from "@/lib/types";
 
 export default function ProfilePage() {
@@ -35,6 +37,7 @@ export default function ProfilePage() {
         setStats(dashboardStats);
       } catch (err) {
         console.error("Failed to load profile", err);
+        toast.error("Couldn't load your profile. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -55,6 +58,7 @@ export default function ProfilePage() {
         bio,
       });
       setSuccess("Profile updated successfully!");
+      toast.success("Profile updated!");
       // Update local user state
       if (user) {
         setUser({ ...user, full_name: fullName, username, bio });
@@ -62,6 +66,7 @@ export default function ProfilePage() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to update profile.");
+      toast.error(err.message || "Couldn't update your profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -73,6 +78,7 @@ export default function ProfilePage() {
 
     if (file.size > 5 * 1024 * 1024) {
       setError("Avatar image must be less than 5MB");
+      toast.error("Avatar image must be less than 5MB.");
       return;
     }
 
@@ -86,9 +92,11 @@ export default function ProfilePage() {
         setUser({ ...user, avatar_url: publicUrl });
       }
       setSuccess("Profile picture updated successfully!");
+      toast.success("Profile picture updated!");
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to upload profile picture.");
+      toast.error(err.message || "Couldn't upload your profile picture. Please try again.");
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {
@@ -98,11 +106,7 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!user) {
@@ -138,18 +142,15 @@ export default function ProfilePage() {
               onChange={handleAvatarChange} 
             />
             
-            {user.avatar_url ? (
-              <img src={user.avatar_url} alt={user.full_name} className="w-20 h-20 rounded-full object-cover" />
-            ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center text-xl font-semibold" style={{ background: "linear-gradient(135deg, #059669, #06b6d4)", color: "white" }}>
-                {user.full_name[0]?.toUpperCase()}
-              </div>
-            )}
-            
+            <Avatar src={user.avatar_url} name={user.full_name} size="xl" />
+
             {/* Edit Overlay */}
-            <div className={`absolute inset-0 bg-black/50 rounded-full flex items-center justify-center transition-opacity ${uploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <div
+              className={`absolute inset-0 rounded-full flex items-center justify-center transition-opacity ${uploadingAvatar ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              style={{ background: "var(--color-overlay)" }}
+            >
               {uploadingAvatar ? (
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                <Spinner size="md" onAccent />
               ) : (
                 <Camera className="w-6 h-6 text-white" />
               )}
@@ -212,7 +213,8 @@ export default function ProfilePage() {
             <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--color-text-secondary)" }}>Bio</label>
             <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="input-field" rows={3} placeholder="Tell us about yourself..." />
           </div>
-          <button type="submit" disabled={saving} className="btn-primary w-full py-3" style={{ opacity: saving ? 0.7 : 1 }}>
+          <button type="submit" disabled={saving} className="btn-primary w-full py-3 flex items-center justify-center gap-2" style={{ opacity: saving ? 0.7 : 1 }}>
+            {saving && <Spinner size="sm" onAccent />}
             {saving ? "Saving Changes..." : "Save Changes"}
           </button>
         </form>

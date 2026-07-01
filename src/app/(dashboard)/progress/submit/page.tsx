@@ -3,11 +3,13 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, X, Upload, Check, ImageIcon, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, X, Check, ImageIcon, ChevronDown } from "lucide-react";
 import { MOOD_EMOJIS } from "@/lib/constants";
 import { getMyGroups } from "@/lib/dal/groups";
 import { submitReport } from "@/lib/dal/reports";
 import type { Group } from "@/lib/types";
+import { PageSpinner, Spinner } from "@/components/ui";
+import { toast } from "sonner";
 
 export default function SubmitReportPage() {
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function SubmitReportPage() {
         }
       } catch (err) {
         console.error("Failed to load user groups", err);
+        toast.error("Couldn't load your groups. Please refresh.");
       } finally {
         setFetchingGroups(false);
       }
@@ -67,20 +70,18 @@ export default function SubmitReportPage() {
         productivity_rating: productivity,
         evidenceFiles,
       });
+      toast.success("Progress submitted! 🎉");
       router.push("/progress");
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to submit report. Please try again.");
+      toast.error(err.message || "Failed to submit report. Please try again.");
       setLoading(false);
     }
   };
 
   if (fetchingGroups) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (
@@ -116,7 +117,7 @@ export default function SubmitReportPage() {
             <div className="relative">
               <select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)} className="input-field appearance-none pr-10" required>
                 {groups.map((group) => (
-                  <option key={group.id} value={group.id} className="bg-neutral-900">{group.name}</option>
+                  <option key={group.id} value={group.id} style={{ background: "var(--color-bg-elevated)" }}>{group.name}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "var(--color-text-muted)" }} />
@@ -211,14 +212,15 @@ export default function SubmitReportPage() {
                     {file.type.startsWith("image/") ? (
                       <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-black/50 text-xs font-bold text-white">
+                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "var(--color-overlay)" }}>
                         VIDEO
                       </div>
                     )}
                     <button 
                       type="button" 
                       onClick={() => setEvidenceFiles(evidenceFiles.filter((_, i) => i !== idx))}
-                      className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white hover:bg-black"
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white"
+                      style={{ background: "var(--color-overlay)" }}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -229,7 +231,11 @@ export default function SubmitReportPage() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full py-3" style={{ opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Submitting Report..." : "Submit Report"}
+            {loading ? (
+              <span className="inline-flex items-center gap-2"><Spinner size="sm" onAccent /> Submitting Report...</span>
+            ) : (
+              "Submit Report"
+            )}
           </button>
         </motion.form>
       )}

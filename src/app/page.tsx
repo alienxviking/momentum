@@ -14,6 +14,8 @@ import {
   Zap,
   Shield,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Aurora } from "@/components/aurora";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -74,19 +76,21 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg-primary)" }}>
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b" style={{ 
-        background: "rgba(5, 10, 8, 0.8)", 
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b" style={{
+        background: "var(--color-topbar-bg)",
         backdropFilter: "blur(12px)",
-        borderColor: "var(--color-border-subtle)" 
+        WebkitBackdropFilter: "blur(12px)",
+        borderColor: "var(--color-border-subtle)"
       }}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-decoration-none">
-            <Zap className="w-6 h-6 text-white" />
+            <Zap className="w-6 h-6" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
             <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>
               Momentum
             </span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <ThemeToggle />
             <Link href="/login" className="text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               style={{ color: "var(--color-text-secondary)" }}>
               Log In
@@ -100,11 +104,8 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        {/* Background gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl"
-          style={{ background: "radial-gradient(circle, #059669, transparent)" }} />
-        <div className="absolute top-40 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl"
-          style={{ background: "radial-gradient(circle, #06b6d4, transparent)" }} />
+        {/* Ambient depth */}
+        <Aurora />
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <motion.div
@@ -339,7 +340,7 @@ export default function LandingPage() {
       }}>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-white" />
+            <Zap className="w-5 h-5" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
             <span className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
           </div>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>

@@ -10,6 +10,7 @@ import {
 import { getCurrentUser, signOut } from "@/lib/dal/auth";
 import { getUnreadCount } from "@/lib/dal/notifications";
 import type { User } from "@/lib/types";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -62,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen flex" style={{ background: "var(--color-bg-primary)" }}>
       {/* Mobile Overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div className="fixed inset-0 z-40 lg:hidden" style={{ background: "var(--color-overlay)" }} onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Sidebar */}
@@ -76,19 +77,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="h-16 flex items-center justify-between px-4 border-b" style={{ borderColor: "var(--color-border-subtle)" }}>
           {!collapsed && (
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Zap className="w-6 h-6 text-white" />
+              <Zap className="w-6 h-6" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
               <span className="text-lg font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
             </Link>
           )}
           {collapsed && (
             <div className="w-8 h-8 flex items-center justify-center mx-auto">
-              <Zap className="w-6 h-6 text-white" />
+              <Zap className="w-6 h-6" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
             </div>
           )}
-          <button onClick={() => setCollapsed(!collapsed)} className="hidden lg:flex p-1 rounded-md transition-colors" style={{ color: "var(--color-text-muted)" }}>
+          <button onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="hidden lg:flex p-1 rounded-md transition-colors" style={{ color: "var(--color-text-muted)" }}>
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
-          <button onClick={() => setMobileOpen(false)} className="lg:hidden p-1" style={{ color: "var(--color-text-muted)" }}>
+          <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="lg:hidden p-1" style={{ color: "var(--color-text-muted)" }}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -143,13 +144,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
         <header className="h-16 flex items-center justify-between px-6 border-b sticky top-0 z-30"
-          style={{ background: "rgba(5, 10, 8, 0.8)", backdropFilter: "blur(12px)", borderColor: "var(--color-border-subtle)" }}>
-          <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 rounded-lg" style={{ color: "var(--color-text-secondary)" }}>
+          style={{ background: "var(--color-topbar-bg)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderColor: "var(--color-border-subtle)" }}>
+          <button onClick={() => setMobileOpen(true)} aria-label="Open menu" className="lg:hidden p-2 rounded-lg" style={{ color: "var(--color-text-secondary)" }}>
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-3">
-            <Link href="/notifications" className="relative p-2 rounded-lg transition-colors" style={{ color: "var(--color-text-secondary)" }}>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/notifications" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"} className="relative p-2 rounded-lg transition-colors" style={{ color: "var(--color-text-secondary)" }}>
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ background: "var(--color-danger)" }} />

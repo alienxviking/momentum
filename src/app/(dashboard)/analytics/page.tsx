@@ -4,14 +4,18 @@ import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Cartesia
 import { useEffect, useState } from "react";
 import { getDashboardStats, getWeeklyProductivity, getMonthlyTrend } from "@/lib/dal/analytics";
 import type { DashboardStats } from "@/lib/types";
+import { toast } from "sonner";
+import { PageSpinner, CountUp } from "@/components/ui";
+import { useChartTheme } from "@/lib/use-chart-theme";
 
-const chartTooltipStyle = { backgroundColor: "#16161f", border: "1px solid #2a2a3a", borderRadius: "8px", color: "#f0f0f5", fontSize: "12px" };
+interface ChartPoint { day?: string; week?: string; hours?: number; score?: number; habits?: number; }
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [weeklyProductivity, setWeeklyProductivity] = useState<any[]>([]);
-  const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
+  const [weeklyProductivity, setWeeklyProductivity] = useState<ChartPoint[]>([]);
+  const [monthlyTrend, setMonthlyTrend] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const chart = useChartTheme();
 
   useEffect(() => {
     async function loadAnalytics() {
@@ -26,6 +30,7 @@ export default function AnalyticsPage() {
         setMonthlyTrend(monthlyData);
       } catch (err) {
         console.error("Failed to load analytics", err);
+        toast.error("Couldn't load analytics. Please refresh.");
       } finally {
         setLoading(false);
       }
@@ -33,13 +38,7 @@ export default function AnalyticsPage() {
     loadAnalytics();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <PageSpinner />;
 
   const activeStats = stats || {
     accountability_score: 50,
@@ -62,13 +61,20 @@ export default function AnalyticsPage() {
           { label: "Accountability Score", value: activeStats.accountability_score, suffix: "/100", color: "#059669" },
           { label: "Weekly Consistency", value: activeStats.weekly_consistency, suffix: "%", color: "#059669" },
           { label: "Current Streak", value: activeStats.current_streak, suffix: " days", color: "#f97316" },
-          { label: "Habits Today", value: `${activeStats.habits_completed_today}/${activeStats.total_habits_today}`, suffix: "", color: "#3b82f6" },
         ].map((s) => (
           <div key={s.label} className="glass-card p-5 text-center">
             <p className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>{s.label}</p>
-            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}{s.suffix}</p>
+            <p className="text-2xl font-bold" style={{ color: s.color }}>
+              <CountUp value={s.value} suffix={s.suffix} />
+            </p>
           </div>
         ))}
+        <div className="glass-card p-5 text-center">
+          <p className="text-xs font-medium mb-1" style={{ color: "var(--color-text-muted)" }}>Habits Today</p>
+          <p className="text-2xl font-bold" style={{ color: "#3b82f6" }}>
+            {activeStats.habits_completed_today}/{activeStats.total_habits_today}
+          </p>
+        </div>
       </motion.div>
 
       {/* Charts Grid */}
@@ -81,10 +87,10 @@ export default function AnalyticsPage() {
           ) : (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={weeklyProductivity}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-                <XAxis dataKey="day" stroke="#6b6b85" fontSize={12} />
-                <YAxis stroke="#6b6b85" fontSize={12} />
-                <Tooltip contentStyle={chartTooltipStyle} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="day" stroke={chart.axis} fontSize={12} />
+                <YAxis stroke={chart.axis} fontSize={12} />
+                <Tooltip contentStyle={chart.tooltip} />
                 <Bar dataKey="hours" fill="#059669" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -99,10 +105,10 @@ export default function AnalyticsPage() {
           ) : (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={weeklyProductivity}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-                <XAxis dataKey="day" stroke="#6b6b85" fontSize={12} />
-                <YAxis stroke="#6b6b85" fontSize={12} />
-                <Tooltip contentStyle={chartTooltipStyle} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="day" stroke={chart.axis} fontSize={12} />
+                <YAxis stroke={chart.axis} fontSize={12} />
+                <Tooltip contentStyle={chart.tooltip} />
                 <Line type="monotone" dataKey="score" stroke="#059669" strokeWidth={2} dot={{ fill: "#059669", r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -117,10 +123,10 @@ export default function AnalyticsPage() {
           ) : (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={weeklyProductivity}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-                <XAxis dataKey="day" stroke="#6b6b85" fontSize={12} />
-                <YAxis stroke="#6b6b85" fontSize={12} />
-                <Tooltip contentStyle={chartTooltipStyle} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="day" stroke={chart.axis} fontSize={12} />
+                <YAxis stroke={chart.axis} fontSize={12} />
+                <Tooltip contentStyle={chart.tooltip} />
                 <Bar dataKey="habits" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -141,10 +147,10 @@ export default function AnalyticsPage() {
                     <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3a" />
-                <XAxis dataKey="week" stroke="#6b6b85" fontSize={12} />
-                <YAxis stroke="#6b6b85" fontSize={12} />
-                <Tooltip contentStyle={chartTooltipStyle} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                <XAxis dataKey="week" stroke={chart.axis} fontSize={12} />
+                <YAxis stroke={chart.axis} fontSize={12} />
+                <Tooltip contentStyle={chart.tooltip} />
                 <Area type="monotone" dataKey="score" stroke="#059669" strokeWidth={2} fill="url(#scoreGrad)" />
               </AreaChart>
             </ResponsiveContainer>

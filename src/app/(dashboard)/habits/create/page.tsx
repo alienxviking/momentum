@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { HABIT_CATEGORIES } from "@/lib/constants";
 import { createHabit } from "@/lib/dal/habits";
+import { Spinner } from "@/components/ui";
+import { toast } from "sonner";
 
 const COLORS = ["#059669", "#047857", "#3b82f6", "#f59e0b", "#ef4444", "#ec4899", "#f97316", "#06b6d4"];
 const ICONS = ["✅", "📚", "💪", "🧘", "💻", "📖", "⏰", "🏃", "🎨", "💰"];
@@ -33,10 +35,12 @@ export default function CreateHabitPage() {
         color,
         icon,
       });
+      toast.success("Habit created!");
       router.push("/habits");
     } catch (err) {
       console.error(err);
       setError("Failed to create habit. Please try again.");
+      toast.error("Failed to create habit. Please try again.");
       setLoading(false);
     }
   };
@@ -101,12 +105,16 @@ export default function CreateHabitPage() {
             {COLORS.map((c) => (
               <button key={c} type="button" onClick={() => setColor(c)}
                 className="w-8 h-8 rounded-full transition-all"
-                style={{ background: c, border: color === c ? "3px solid white" : "3px solid transparent", boxShadow: color === c ? `0 0 10px ${c}` : "none" }} />
+                style={{ background: c, border: color === c ? "3px solid var(--color-bg-card)" : "3px solid transparent", boxShadow: color === c ? `0 0 0 2px ${c}, 0 0 10px ${c}` : "none" }} />
             ))}
           </div>
         </div>
         <button type="submit" disabled={loading} className="btn-primary w-full py-3" style={{ opacity: loading ? 0.7 : 1 }}>
-          {loading ? "Creating..." : "Create Habit"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2"><Spinner size="sm" onAccent /> Creating...</span>
+          ) : (
+            "Create Habit"
+          )}
         </button>
       </motion.form>
     </div>

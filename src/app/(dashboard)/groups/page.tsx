@@ -3,8 +3,10 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Plus, Users, Search, Key } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { getMyGroups, joinGroupByInvite } from "@/lib/dal/groups";
 import { GROUP_CATEGORIES } from "@/lib/constants";
+import { PageSpinner, EmptyState, CategoryIcon } from "@/components/ui";
 import type { Group } from "@/lib/types";
 
 const fadeUp = {
@@ -28,6 +30,7 @@ export default function GroupsPage() {
         setGroups(myGroups);
       } catch (err) {
         console.error("Error loading groups", err);
+        toast.error("Couldn't load your groups. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -46,12 +49,14 @@ export default function GroupsPage() {
     try {
       const groupId = await joinGroupByInvite(inviteCode.trim());
       setJoinSuccess("Successfully joined group!");
+      toast.success("Successfully joined group!");
       setInviteCode("");
       // Refresh groups list
       const myGroups = await getMyGroups();
       setGroups(myGroups);
     } catch (err: any) {
       setJoinError(err.message || "Failed to join group.");
+      toast.error(err.message || "Failed to join group.");
     } finally {
       setJoining(false);
     }
@@ -63,11 +68,7 @@ export default function GroupsPage() {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (
@@ -112,15 +113,13 @@ export default function GroupsPage() {
       )}
 
       {filteredGroups.length === 0 ? (
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="glass-card p-16 text-center space-y-5 max-w-2xl mx-auto mt-4">
-          <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center text-4xl" style={{ background: "rgba(5, 150, 105, 0.1)" }}>👥</div>
-          <h3 className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>No groups found</h3>
-          <p className="text-sm max-w-md mx-auto leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-            {search ? "No groups match your search criteria." : "You haven't joined any accountability groups yet. Create a group or join one with an invite code."}
-          </p>
-          {!search && (
-            <Link href="/groups/create" className="btn-primary inline-flex gap-2"><Plus className="w-4 h-4" /> Create Group</Link>
-          )}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="max-w-2xl mx-auto mt-4">
+          <EmptyState
+            emoji="👥"
+            title="No groups found"
+            description={search ? "No groups match your search criteria." : "You haven't joined any accountability groups yet. Create a group or join one with an invite code."}
+            action={!search ? { label: "Create Group", href: "/groups/create" } : undefined}
+          />
         </motion.div>
       ) : (
         <div className="grid md:grid-cols-2 gap-5">
@@ -130,9 +129,7 @@ export default function GroupsPage() {
               <motion.div key={group.id} initial="hidden" animate="visible" variants={fadeUp} custom={i + 2}>
                 <Link href={`/groups/${group.id}`} className="glass-card p-6 block">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: `${cat.color}20` }}>
-                      {cat.icon}
-                    </div>
+                    <CategoryIcon category={group.category} size="lg" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
                         <h3 className="text-base font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{group.name}</h3>

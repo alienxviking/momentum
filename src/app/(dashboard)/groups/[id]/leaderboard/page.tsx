@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, TrendingUp, Flame } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getLeaderboard } from "@/lib/dal/analytics";
 import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { PageSpinner, Avatar, Badge } from "@/components/ui";
 import type { LeaderboardEntry } from "@/lib/types";
 
 export default function LeaderboardPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +26,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
         setEntries(data);
       } catch (err) {
         console.error("Error loading leaderboard", err);
+        toast.error("Couldn't load the leaderboard. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -32,11 +35,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   // Safely construct podium entries based on what we have
@@ -66,13 +65,15 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
           className="glass-card p-6 flex items-end justify-center gap-4">
           {podiumList.map(({ entry, height, color, rank }) => (
             <div key={entry.rank} className="flex flex-col items-center">
-              <div className="avatar avatar-lg mb-2 font-semibold" style={{ background: `${color}30`, color: color, border: `2px solid ${color}` }}>
-                {entry.user.avatar_url ? (
-                  <img src={entry.user.avatar_url} alt={entry.user.full_name} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  entry.user.full_name[0]?.toUpperCase()
-                )}
-              </div>
+              {entry.user.avatar_url ? (
+                <div className="mb-2 rounded-full" style={{ border: `2px solid ${color}` }}>
+                  <Avatar src={entry.user.avatar_url} name={entry.user.full_name} size="lg" />
+                </div>
+              ) : (
+                <div className="avatar avatar-lg mb-2 font-semibold" style={{ background: `${color}30`, color: color, border: `2px solid ${color}` }}>
+                  {entry.user.full_name[0]?.toUpperCase()}
+                </div>
+              )}
               <span className="text-xs font-medium mb-1" style={{ color: "var(--color-text-primary)" }}>{entry.user.full_name.split(" ")[0]}</span>
               <span className="text-lg font-bold" style={{ color }}>{entry.score}</span>
               <div className="w-20 rounded-t-xl flex items-end justify-center pb-2 animate-pulse" style={{ height, background: `${color}15`, border: `1px solid ${color}30`, borderBottom: "none" }}>
@@ -90,20 +91,14 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
             No members have recorded scores yet.
           </div>
         ) : (
-          entries.map((entry, idx) => (
+          entries.map((entry) => (
             <div key={entry.rank} className="flex items-center gap-4 p-4 rounded-xl transition-colors"
               style={{ background: entry.rank <= 3 ? "var(--color-bg-tertiary)" : "transparent" }}>
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
                 style={{ background: entry.rank === 1 ? "#f59e0b20" : entry.rank === 2 ? "#94a3b820" : entry.rank === 3 ? "#cd7f3220" : "var(--color-bg-tertiary)", color: entry.rank === 1 ? "#f59e0b" : entry.rank === 2 ? "#94a3b8" : entry.rank === 3 ? "#cd7f32" : "var(--color-text-muted)" }}>
                 {entry.rank}
               </div>
-              <div className="avatar avatar-md font-semibold" style={{ background: `hsl(${(idx * 73) % 360}, 60%, 50%)`, color: "white" }}>
-                {entry.user.avatar_url ? (
-                  <img src={entry.user.avatar_url} alt={entry.user.full_name} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  entry.user.full_name[0]?.toUpperCase()
-                )}
-              </div>
+              <Avatar src={entry.user.avatar_url} name={entry.user.full_name} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{entry.user.full_name}</div>
                 <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
@@ -111,7 +106,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
                 </div>
               </div>
               {entry.badge && badgeLabels[entry.badge] && (
-                <span className="badge badge-warning text-xs">{badgeLabels[entry.badge].emoji} {badgeLabels[entry.badge].label}</span>
+                <Badge variant="warning" className="text-xs">{badgeLabels[entry.badge].emoji} {badgeLabels[entry.badge].label}</Badge>
               )}
               <span className="text-xl font-bold" style={{ color: "var(--color-accent-primary)" }}>{entry.score}</span>
             </div>

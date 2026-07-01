@@ -2,9 +2,11 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Plus, CheckCircle2, Flame } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getHabits, toggleHabitCompletion, getHeatmapData } from "@/lib/dal/habits";
 import type { Habit, HeatmapDay } from "@/lib/types";
+import { PageSpinner, EmptyState } from "@/components/ui";
+import { toast } from "sonner";
 
 function HabitHeatmap({ data }: { data: HeatmapDay[] }) {
   const weeks: HeatmapDay[][] = [];
@@ -14,8 +16,9 @@ function HabitHeatmap({ data }: { data: HeatmapDay[] }) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="flex gap-0.5 items-start" style={{ minWidth: "720px" }}>
+    <div className="relative">
+      <div className="overflow-x-auto pb-2">
+        <div className="flex gap-0.5 items-start" style={{ minWidth: "720px" }}>
         <div className="flex flex-col gap-0.5 mr-1 text-[10px] pt-4" style={{ color: "var(--color-text-muted)" }}>
           <span style={{ height: 13 }}>Mon</span>
           <span style={{ height: 13 }}></span>
@@ -38,9 +41,13 @@ function HabitHeatmap({ data }: { data: HeatmapDay[] }) {
               <div key={day.date} className={`heatmap-cell heatmap-level-${day.level}`}
                 style={{ width: 13, height: 13 }} title={`${day.date}: ${day.count} completed`} />
             ))}
-          </div>
-        ))}
+            </div>
+          ))}
+        </div>
       </div>
+      {/* Fade affordance — hints the heatmap scrolls horizontally on narrow screens */}
+      <div className="pointer-events-none absolute top-0 right-0 bottom-2 w-12 hidden sm:block"
+        style={{ background: "linear-gradient(90deg, transparent, var(--color-bg-card))" }} />
       <div className="flex items-center gap-1 mt-2 justify-end text-[10px]" style={{ color: "var(--color-text-muted)" }}>
         <span>Less</span>
         {[0, 1, 2, 3, 4].map((level) => (
@@ -68,6 +75,7 @@ export default function HabitsPage() {
         setHeatmap(currentHeatmap);
       } catch (err) {
         console.error("Error loading habits page data", err);
+        toast.error("Couldn't load your habits. Please refresh.");
       } finally {
         setLoading(false);
       }
@@ -92,19 +100,17 @@ export default function HabitsPage() {
       // Reload heatmap
       const newHeatmap = await getHeatmapData();
       setHeatmap(newHeatmap);
+      toast.success(isCompleted ? "Habit completed! 🔥" : "Habit unmarked");
     } catch (err) {
       console.error("Failed to toggle habit", err);
+      toast.error("Couldn't update habit. Please try again.");
     }
   };
 
   const completedCount = habits.filter((h) => h.completed_today).length;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (
@@ -132,14 +138,12 @@ export default function HabitsPage() {
       {/* Habits List */}
       <div className="space-y-3">
         {habits.length === 0 ? (
-          <div className="glass-card p-12 text-center space-y-5">
-            <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center text-4xl" style={{ background: "rgba(5, 150, 105, 0.1)" }}>🎯</div>
-            <h3 className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>Build your first habit</h3>
-            <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--color-text-secondary)" }}>
-              Define a daily or weekly target, track your progress with custom colors and icons, and build your streaks.
-            </p>
-            <Link href="/habits/create" className="btn-primary inline-flex"><Plus className="w-4 h-4" /> Get Started</Link>
-          </div>
+          <EmptyState
+            emoji="🎯"
+            title="Build your first habit"
+            description="Define a daily or weekly target, track your progress with custom colors and icons, and build your streaks."
+            action={{ label: "Get Started", href: "/habits/create" }}
+          />
         ) : (
           habits.map((habit, i) => (
             <motion.div key={habit.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }}

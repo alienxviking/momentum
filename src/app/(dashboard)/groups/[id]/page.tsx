@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Users, Trophy, Copy, Settings, Crown, TrendingUp, Check } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Copy, Settings, Crown, Check } from "lucide-react";
 import { getGroupById, getGroupMembers } from "@/lib/dal/groups";
 import { getLeaderboard } from "@/lib/dal/analytics";
 import { GROUP_CATEGORIES } from "@/lib/constants";
 import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { PageSpinner, Avatar, CategoryIcon } from "@/components/ui";
 import type { Group, User, LeaderboardEntry } from "@/lib/types";
 
 export default function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,6 +31,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         setLeaderboard(currentLeaderboard.slice(0, 3));
       } catch (err) {
         console.error("Error loading group details", err);
+        toast.error("Couldn't load this group. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -40,15 +43,12 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     if (!group) return;
     navigator.clipboard.writeText(group.invite_code);
     setCopied(true);
+    toast.success("Invite code copied!");
     setTimeout(() => setCopied(false), 2000);
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!group) {
@@ -72,7 +72,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="glass-card p-6">
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0" style={{ background: `${cat.color}20` }}>{cat.icon}</div>
+          <CategoryIcon category={group.category} size="lg" className="w-16 h-16 text-3xl rounded-2xl" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h1 className="text-xl font-bold truncate" style={{ color: "var(--color-text-primary)" }}>{group.name}</h1>
@@ -89,7 +89,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         {/* Invite */}
         <div className="mt-4 flex items-center gap-2 p-3 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>
           <span className="text-xs font-medium flex-1 font-mono truncate" style={{ color: "var(--color-text-secondary)" }}>
-            Invite Code: <span className="font-bold text-white select-all">{group.invite_code}</span>
+            Invite Code: <span className="font-bold select-all" style={{ color: "var(--color-accent-primary)" }}>{group.invite_code}</span>
           </span>
           <button onClick={copyInviteCode} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1">
             {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
@@ -103,15 +103,9 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-6">
           <h2 className="text-base font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>Members</h2>
           <div className="space-y-3">
-            {members.map((user, i) => (
+            {members.map((user) => (
               <div key={user.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name} className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="avatar avatar-md font-semibold" style={{ background: `hsl(${(i * 73) % 360}, 70%, 50%)`, color: "white" }}>
-                    {user.full_name[0]?.toUpperCase()}
-                  </div>
-                )}
+                <Avatar src={user.avatar_url} name={user.full_name} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{user.full_name}</div>
                   <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>Score: {user.accountability_score}</div>

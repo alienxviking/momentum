@@ -2,8 +2,9 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Bell, Check, CheckCheck, MessageSquare, Flame, BarChart3, Users, Star } from "lucide-react";
+import { toast } from "sonner";
 import { getNotifications, markAsRead, markAllAsRead } from "@/lib/dal/notifications";
-import Link from "next/link";
+import { PageSpinner, EmptyState } from "@/components/ui";
 import type { Notification } from "@/lib/types";
 
 const typeIcons: Record<string, { icon: typeof Bell; color: string }> = {
@@ -27,6 +28,7 @@ export default function NotificationsPage() {
       setNotifications(data);
     } catch (err) {
       console.error("Failed to load notifications", err);
+      toast.error("Couldn't load notifications. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -40,8 +42,10 @@ export default function NotificationsPage() {
     try {
       await markAllAsRead();
       setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
+      toast.success("All notifications marked as read.");
     } catch (err) {
       console.error(err);
+      toast.error("Couldn't mark notifications as read. Please try again.");
     }
   };
 
@@ -49,17 +53,15 @@ export default function NotificationsPage() {
     try {
       await markAsRead(id);
       setNotifications(notifications.map((n) => n.id === id ? { ...n, is_read: true } : n));
+      toast.success("Notification marked as read.");
     } catch (err) {
       console.error(err);
+      toast.error("Couldn't mark notification as read. Please try again.");
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (
@@ -76,9 +78,11 @@ export default function NotificationsPage() {
 
       <div className="space-y-2">
         {notifications.length === 0 ? (
-          <div className="glass-card p-12 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
-            You have no notifications.
-          </div>
+          <EmptyState
+            emoji="🔔"
+            title="No notifications"
+            description="You're all caught up! New activity from your groups will show up here."
+          />
         ) : (
           notifications.map((notif, i) => {
             const config = typeIcons[notif.type] || typeIcons.friend_progress;
@@ -101,7 +105,7 @@ export default function NotificationsPage() {
                     </span>
                   </div>
                   {!notif.is_read && (
-                    <button onClick={() => handleMarkRead(notif.id)} className="p-1 rounded-md transition-colors hover:text-white" style={{ color: "var(--color-text-muted)" }}>
+                    <button onClick={() => handleMarkRead(notif.id)} className="p-1 rounded-md transition-colors" style={{ color: "var(--color-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-accent-primary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
                       <Check className="w-4 h-4" />
                     </button>
                   )}

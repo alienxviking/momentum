@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { getGroupById, updateGroup, deleteGroup } from "@/lib/dal/groups";
 import { getCurrentUser } from "@/lib/dal/auth";
+import { PageSpinner, Spinner } from "@/components/ui";
 import type { Group } from "@/lib/types";
 
 export default function GroupSettingsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -42,6 +44,7 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
         }
       } catch (err) {
         console.error("Failed to load group for settings", err);
+        toast.error("Couldn't load group settings. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -62,9 +65,11 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
         is_public: isPublic,
       });
       setSuccess("Settings saved successfully!");
+      toast.success("Settings saved successfully!");
     } catch (err) {
       console.error(err);
       setError("Failed to update group. Please try again.");
+      toast.error("Failed to update group. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -74,10 +79,12 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
     setDeleting(true);
     try {
       await deleteGroup(id);
+      toast.success("Group deleted.");
       router.push("/groups");
     } catch (err) {
       console.error(err);
       setError("Failed to delete group. Please try again.");
+      toast.error("Failed to delete group. Please try again.");
       setShowDeleteModal(false);
     } finally {
       setDeleting(false);
@@ -85,11 +92,7 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!group) {
@@ -143,7 +146,7 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
         </div>
         {isOwner && (
           <button onClick={handleSave} disabled={saving} className="btn-primary w-full py-3">
-            {saving ? "Saving Changes..." : "Save Changes"}
+            {saving ? <><Spinner size="sm" onAccent /> Saving Changes...</> : "Save Changes"}
           </button>
         )}
       </motion.div>
@@ -166,7 +169,8 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => !deleting && setShowDeleteModal(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            style={{ background: "var(--color-overlay)" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}

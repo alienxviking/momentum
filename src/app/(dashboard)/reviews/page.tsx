@@ -1,11 +1,13 @@
 "use client";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, Send, ThumbsUp } from "lucide-react";
+import { CheckCircle2, Clock, Send } from "lucide-react";
+import { toast } from "sonner";
 import { getReports, addComment, addReaction } from "@/lib/dal/reports";
 import { getCurrentUser } from "@/lib/dal/auth";
 import { MOOD_EMOJIS, REACTION_CONFIG } from "@/lib/constants";
-import { ReactionType, DailyReport, User } from "@/lib/types";
+import { PageSpinner, EmptyState, Avatar, Badge } from "@/components/ui";
+import { ReactionType, DailyReport, User, Reaction } from "@/lib/types";
 
 export default function ReviewsPage() {
   const [reports, setReports] = useState<DailyReport[]>([]);
@@ -24,6 +26,7 @@ export default function ReviewsPage() {
       setCurrentUser(userData);
     } catch (err) {
       console.error("Failed to load reviews data", err);
+      toast.error("Couldn't load reviews. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -34,15 +37,45 @@ export default function ReviewsPage() {
   }, []);
 
   const handleToggleReaction = async (reportId: string, type: ReactionType) => {
-    if (!REACTION_CONFIG[type]) return;
+    if (!REACTION_CONFIG[type] || !currentUser) return;
+    const userId = currentUser.id;
+
+    const report = reports.find((r) => r.id === reportId);
+    if (!report) return;
+    const hadReaction = (report.reactions || []).some(
+      (r) => r.user_id === userId && r.reaction_type === type
+    );
+
+    // Optimistic update — reflect the toggle instantly, then sync in the
+    // background. The DB confirmation no longer blocks the UI.
+    const applyToggle = (list: DailyReport[], add: boolean) =>
+      list.map((r) => {
+        if (r.id !== reportId) return r;
+        const existing = r.reactions || [];
+        const reactions = add
+          ? [
+              ...existing,
+              {
+                id: `optimistic-${userId}-${type}`,
+                report_id: reportId,
+                user_id: userId,
+                reaction_type: type,
+                created_at: new Date().toISOString(),
+              } as Reaction,
+            ]
+          : existing.filter((x) => !(x.user_id === userId && x.reaction_type === type));
+        return { ...r, reactions };
+      });
+
+    setReports((prev) => applyToggle(prev, !hadReaction));
 
     try {
       await addReaction(reportId, type);
-      // Reload reports to display update
-      const reportsData = await getReports();
-      setReports(reportsData);
     } catch (err) {
       console.error("Failed to add reaction", err);
+      // Revert the optimistic change on failure.
+      setReports((prev) => applyToggle(prev, hadReaction));
+      toast.error("Couldn't update your reaction. Please try again.");
     }
   };
 
@@ -57,19 +90,17 @@ export default function ReviewsPage() {
       // Reload reports
       const reportsData = await getReports();
       setReports(reportsData);
+      toast.success("Comment posted!");
     } catch (err) {
       console.error("Failed to submit comment", err);
+      toast.error("Couldn't post your comment. Please try again.");
     } finally {
       setSubmittingComment(prev => ({ ...prev, [reportId]: false }));
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (
@@ -81,9 +112,12 @@ export default function ReviewsPage() {
 
       <div className="space-y-8">
         {reports.length === 0 ? (
-          <div className="glass-card p-12 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
-            No progress reports available in your groups yet. Join a group or submit your own report!
-          </div>
+          <EmptyState
+            emoji="📝"
+            title="No reviews yet"
+            description="No progress reports available in your groups yet. Join a group or submit your own report!"
+            action={{ label: "Browse groups", href: "/groups" }}
+          />
         ) : (
           reports.map((report, i) => {
             const mood = MOOD_EMOJIS[report.mood_rating] || { emoji: "😐", label: "Neutral" };
@@ -93,19 +127,13 @@ export default function ReviewsPage() {
             const reportReactions = report.reactions || [];
             const userReactions = reportReactions
               .filter(r => r.user_id === currentUser?.id)
-              .map(r => (r as any).reaction_type);
+              .map(r => r.reaction_type);
 
             return (
               <motion.div key={report.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="glass-card p-6 space-y-4">
                 {/* Header */}
                 <div className="flex items-start gap-3">
-                  {report.user?.avatar_url ? (
-                    <img src={report.user.avatar_url} alt={report.user.full_name} className="w-12 h-12 rounded-full object-cover" />
-                  ) : (
-                    <div className="avatar avatar-lg flex-shrink-0 font-semibold" style={{ background: `hsl(${(i * 73 + 30) % 360}, 60%, 50%)`, color: "white" }}>
-                      {report.user?.full_name?.[0]?.toUpperCase() || "?"}
-                    </div>
-                  )}
+                  <Avatar src={report.user?.avatar_url} name={report.user?.full_name} size="lg" className="flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>{report.user?.full_name}</span>
@@ -146,7 +174,7 @@ export default function ReviewsPage() {
                             <img src={ev.file_url} alt="Evidence" className="w-full h-full object-cover" />
                           </a>
                         ) : (
-                          <a href={ev.file_url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center bg-black/50 text-xs font-bold text-white text-center p-1">
+                          <a href={ev.file_url} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center text-xs font-bold text-center p-1" style={{ background: "var(--color-bg-tertiary)", color: "var(--color-text-secondary)" }}>
                             VIDEO
                           </a>
                         )}
@@ -158,8 +186,8 @@ export default function ReviewsPage() {
                 {/* Reactions */}
                 <div className="flex flex-wrap gap-2 pt-2" style={{ borderTop: "1px solid var(--color-border-subtle)" }}>
                   {Object.entries(REACTION_CONFIG).map(([key, config]) => {
-                    const isActive = userReactions.includes(key);
-                    const count = reportReactions.filter(r => ((r as any).reaction_type) === key).length;
+                    const isActive = userReactions.includes(key as ReactionType);
+                    const count = reportReactions.filter(r => r.reaction_type === key).length;
                     return (
                       <button key={key} onClick={() => handleToggleReaction(report.id, key as ReactionType)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:opacity-85"
@@ -176,18 +204,12 @@ export default function ReviewsPage() {
                     {comments.map((comment) => (
                       <div key={comment.id}>
                         <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>
-                          {comment.user?.avatar_url ? (
-                            <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                          ) : (
-                            <div className="avatar avatar-sm flex-shrink-0 font-semibold" style={{ background: "var(--color-accent-primary)", color: "white" }}>
-                              {comment.user?.full_name?.[0]?.toUpperCase()}
-                            </div>
-                          )}
+                          <Avatar src={comment.user?.avatar_url} name={comment.user?.full_name} size="sm" className="flex-shrink-0" />
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold" style={{ color: "var(--color-text-primary)" }}>{comment.user?.full_name}</span>
                               {comment.feedback_type !== "general" && (
-                                <span className="badge badge-accent text-[10px]">{comment.feedback_type?.replace(/_/g, " ")}</span>
+                                <Badge variant="accent" className="text-[10px]">{comment.feedback_type?.replace(/_/g, " ")}</Badge>
                               )}
                             </div>
                             <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>{comment.content}</p>
@@ -196,13 +218,7 @@ export default function ReviewsPage() {
                         {/* Replies */}
                         {comment.replies?.map((reply) => (
                           <div key={reply.id} className="flex items-start gap-2 p-3 rounded-xl ml-8 mt-2" style={{ background: "var(--color-bg-tertiary)" }}>
-                            {reply.user?.avatar_url ? (
-                              <img src={reply.user.avatar_url} alt={reply.user.full_name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                            ) : (
-                              <div className="avatar avatar-sm flex-shrink-0 font-semibold" style={{ background: "#06b6d4", color: "white" }}>
-                                {reply.user?.full_name?.[0]?.toUpperCase()}
-                              </div>
-                            )}
+                            <Avatar src={reply.user?.avatar_url} name={reply.user?.full_name} size="sm" className="flex-shrink-0" />
                             <div>
                               <span className="text-xs font-semibold" style={{ color: "var(--color-text-primary)" }}>{reply.user?.full_name}</span>
                               <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>{reply.content}</p>

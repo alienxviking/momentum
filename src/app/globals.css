@@ -39,6 +39,13 @@
   --color-streak-fire: #f97316;
   --color-streak-glow: rgba(249, 115, 22, 0.3);
 
+  /* Surfaces that must adapt per-theme */
+  --color-topbar-bg: rgba(5, 10, 8, 0.72);
+  --glass-bg: linear-gradient(135deg, rgba(12, 23, 18, 0.8), rgba(15, 28, 22, 0.6));
+  --glass-highlight: rgba(255, 255, 255, 0.03);
+  --color-overlay: rgba(0, 0, 0, 0.55);
+  --gradient-brand: linear-gradient(135deg, #059669, #06b6d4);
+
   /* Spacing */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -77,6 +84,37 @@ body {
   min-height: 100vh;
 }
 
+/* Theme transition — applied only for the brief moment of a toggle (via a
+   class added by ThemeProvider) so it never overrides component hover timings. */
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition: background-color 0.35s var(--ease-smooth),
+    border-color 0.35s var(--ease-smooth), color 0.25s var(--ease-smooth),
+    fill 0.35s var(--ease-smooth) !important;
+}
+
+/* Accessible focus ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Respect reduced-motion preference globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ============================================================================
    Custom Scrollbar
    ============================================================================ */
@@ -105,22 +143,30 @@ body {
    ============================================================================ */
 
 .glass-card {
-  background: linear-gradient(
-    135deg,
-    rgba(12, 23, 18, 0.8),
-    rgba(15, 28, 22, 0.6)
-  );
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-2xl);
-  transition: all 0.3s var(--ease-smooth);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: border-color 0.3s var(--ease-smooth),
+    box-shadow 0.3s var(--ease-smooth), transform 0.3s var(--ease-smooth);
+  box-shadow: var(--shadow-card), inset 0 1px 0 var(--glass-highlight);
 }
 
 .glass-card:hover {
   border-color: var(--color-border-accent);
-  box-shadow: var(--shadow-elevated), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: var(--shadow-elevated), inset 0 1px 0 var(--glass-highlight);
   transform: translateY(-2px);
+}
+
+/* Opt-in spring lift for interactive cards */
+.glass-card-interactive {
+  cursor: pointer;
+}
+.glass-card-interactive:hover {
+  transform: translateY(-3px) scale(1.01);
+}
+.glass-card-interactive:active {
+  transform: translateY(-1px) scale(1);
 }
 
 /* ============================================================================
@@ -287,11 +333,49 @@ body {
   stroke-width: 1;
 }
 
-.heatmap-level-0 { fill: var(--color-bg-tertiary); }
+.heatmap-level-0 { fill: var(--heatmap-empty, var(--color-bg-tertiary)); }
 .heatmap-level-1 { fill: #1a3a2a; }
 .heatmap-level-2 { fill: #1a5c3a; }
 .heatmap-level-3 { fill: #059669; }
 .heatmap-level-4 { fill: #10b981; }
+
+/* ============================================================================
+   Aurora ambient blobs
+   ============================================================================ */
+
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(3%, -4%) scale(1.08); }
+  66% { transform: translate(-3%, 3%) scale(0.96); }
+}
+
+.aurora-blob {
+  animation: aurora-drift 18s var(--ease-smooth) infinite;
+  will-change: transform;
+}
+
+/* ============================================================================
+   Skeleton shimmer
+   ============================================================================ */
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--glass-highlight),
+    transparent
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.6s var(--ease-smooth) infinite;
+}
 
 /* ============================================================================
    Badge
@@ -391,6 +475,66 @@ body {
   transform: translateY(0);
 }
 
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-smooth);
+}
+
+.btn-ghost:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-danger);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: var(--radius-xl);
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-smooth);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+/* Size modifiers */
+.btn-sm {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-lg);
+}
+
+.btn-lg {
+  padding: 0.875rem 1.75rem;
+  font-size: 1rem;
+}
+
 /* ============================================================================
    Input Styles
    ============================================================================ */
@@ -466,18 +610,46 @@ body {
    ============================================================================ */
 
 [data-theme="light"] {
-  --color-bg-primary: #fafafa;
+  color-scheme: light;
+
+  /* Warm off-white surfaces with a faint emerald cast — not flat gray */
+  --color-bg-primary: #f4f8f5;
   --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f5f5f5;
+  --color-bg-tertiary: #ecf3ee;
   --color-bg-card: #ffffff;
-  --color-bg-card-hover: #f9fafb;
+  --color-bg-card-hover: #f3f8f4;
   --color-bg-elevated: #ffffff;
-  --color-border-default: #e5e7eb;
-  --color-border-subtle: #f3f4f6;
-  --color-border-accent: #d1d5db;
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
+
+  --color-border-default: #d6e6dc;
+  --color-border-subtle: #e6f0e9;
+  --color-border-accent: #a7d3bb;
+
+  --color-text-primary: #0a1f17;
+  --color-text-secondary: #4a6357;
+  --color-text-muted: #6f8a7d;
   --color-text-accent: #047857;
-  --color-accent-glow: rgba(5, 150, 105, 0.1);
+
+  --color-accent-primary: #059669;
+  --color-accent-primary-hover: #047857;
+  --color-accent-glow: rgba(5, 150, 105, 0.14);
+
+  --color-success-soft: rgba(5, 150, 105, 0.12);
+  --color-warning-soft: rgba(245, 158, 11, 0.14);
+  --color-danger-soft: rgba(239, 68, 68, 0.12);
+  --color-info-soft: rgba(59, 130, 246, 0.12);
+
+  /* Light-appropriate elevation — soft, low-opacity shadows instead of near-black */
+  --shadow-card: 0 1px 2px rgba(16, 51, 38, 0.06), 0 1px 3px rgba(16, 51, 38, 0.05);
+  --shadow-elevated: 0 8px 30px rgba(16, 51, 38, 0.1), 0 2px 8px rgba(16, 51, 38, 0.06);
+  --shadow-glow-accent: 0 0 24px rgba(5, 150, 105, 0.16);
+  --shadow-glow-green: 0 0 24px rgba(5, 150, 105, 0.16);
+
+  /* Adaptive surfaces */
+  --color-topbar-bg: rgba(255, 255, 255, 0.78);
+  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(244, 248, 245, 0.78));
+  --glass-highlight: rgba(255, 255, 255, 0.6);
+  --color-overlay: rgba(16, 51, 38, 0.32);
+
+  /* Heatmap reads better with lighter empty cells in light mode */
+  --heatmap-empty: #e2ede6;
 }

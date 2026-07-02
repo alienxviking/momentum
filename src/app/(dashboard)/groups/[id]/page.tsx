@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Users, Trophy, Copy, Settings, Crown, Check } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Copy, Settings, Crown, Check, Link2 } from "lucide-react";
 import { getGroupById, getGroupMembers } from "@/lib/dal/groups";
 import { getLeaderboard } from "@/lib/dal/analytics";
 import { GROUP_CATEGORIES } from "@/lib/constants";
@@ -17,6 +17,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     async function loadGroupData() {
@@ -45,6 +46,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     setCopied(true);
     toast.success("Invite code copied!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyInviteLink = () => {
+    if (!group) return;
+    const link = `${window.location.origin}/join/${group.invite_code}`;
+    navigator.clipboard.writeText(link);
+    setLinkCopied(true);
+    toast.success("Invite link copied! Anyone with it can join.");
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   if (loading) {
@@ -93,7 +103,11 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           </span>
           <button onClick={copyInviteCode} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1">
             {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? "Copied" : "Code"}
+          </button>
+          <button onClick={copyInviteLink} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1">
+            {linkCopied ? <Check className="w-3 h-3 text-emerald-500" /> : <Link2 className="w-3 h-3" />}
+            {linkCopied ? "Copied" : "Link"}
           </button>
         </div>
       </motion.div>

@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   LayoutDashboard, Users, Target, TrendingUp, MessageSquare,
   BarChart3, Bell, ChevronLeft, ChevronRight, LogOut,
@@ -10,6 +11,7 @@ import {
 import { getCurrentUser, signOut } from "@/lib/dal/auth";
 import { getUnreadCount, maybeCreateDailyReminder } from "@/lib/dal/notifications";
 import { ensureWeeklyReviews } from "@/lib/dal/weekly";
+import { joinGroupByInvite } from "@/lib/dal/groups";
 import type { User } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
@@ -26,6 +28,7 @@ const navItems = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -38,6 +41,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (currentUser) {
           setUser(currentUser);
         }
+        // Complete an invite the user opened before signing in (see /join).
+        let pendingInvite: string | null = null;
+        try {
+          pendingInvite = localStorage.getItem("pendingInvite");
+        } catch {
+          // ignore storage errors
+        }
+        if (pendingInvite) {
+          localStorage.removeItem("pendingInvite");
+          try {
+            const groupId = await joinGroupByInvite(pendingInvite);
+            toast.success("You've joined the group!");
+            router.push(`/groups/${groupId}`);
+          } catch (e) {
+            if (!(e instanceof Error && e.message === "Already a member")) {
+              console.error("Failed to complete pending invite", e);
+            }
+          }
+        }
         // Generate any due reminders / weekly reviews before counting unread,
         // so their notifications are reflected in the badge.
         await maybeCreateDailyReminder();
@@ -49,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     loadUserData();
-  }, [pathname]);
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     try {

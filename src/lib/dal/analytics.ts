@@ -111,6 +111,28 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   };
 }
 
+export async function getOnboardingStatus(): Promise<{
+  hasGroup: boolean;
+  hasHabit: boolean;
+  hasReport: boolean;
+}> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { hasGroup: false, hasHabit: false, hasReport: false };
+
+  const [groups, habits, reports] = await Promise.all([
+    supabase.from("group_members").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("habits").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("daily_reports").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+  ]);
+
+  return {
+    hasGroup: (groups.count || 0) > 0,
+    hasHabit: (habits.count || 0) > 0,
+    hasReport: (reports.count || 0) > 0,
+  };
+}
+
 export async function getWeeklyProductivity() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

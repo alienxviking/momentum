@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Flame, CheckCircle2, ListTodo, TrendingUp, Users, MessageSquare, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/dal/auth";
-import { getDashboardStats } from "@/lib/dal/analytics";
+import { getDashboardStats, getOnboardingStatus } from "@/lib/dal/analytics";
 import { getHabits, toggleHabitCompletion } from "@/lib/dal/habits";
 import { getMyGroups } from "@/lib/dal/groups";
 import { getReports } from "@/lib/dal/reports";
@@ -21,6 +21,7 @@ import {
   Badge,
 } from "@/components/ui";
 import { DashboardSkeleton } from "./skeleton";
+import { OnboardingChecklist, type OnboardingStatus } from "./onboarding-checklist";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -33,23 +34,26 @@ export default function DashboardPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [recentReports, setRecentReports] = useState<DailyReport[]>([]);
+  const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [currentUser, currentStats, currentHabits, currentGroups, currentReports] = await Promise.all([
+        const [currentUser, currentStats, currentHabits, currentGroups, currentReports, onboardingStatus] = await Promise.all([
           getCurrentUser(),
           getDashboardStats(),
           getHabits(),
           getMyGroups(),
           getReports(),
+          getOnboardingStatus(),
         ]);
         setUser(currentUser);
         setStats(currentStats);
         setHabits(currentHabits);
         setGroups(currentGroups.slice(0, 3));
         setRecentReports(currentReports.slice(0, 2));
+        setOnboarding(onboardingStatus);
       } catch (err) {
         console.error("Error loading dashboard data", err);
         toast.error("Couldn't load your dashboard. Please refresh.");
@@ -109,6 +113,13 @@ export default function DashboardPage() {
         </h1>
         <p className="text-sm mt-2" style={{ color: "var(--color-text-secondary)" }}>Here&apos;s your progress overview for today.</p>
       </motion.div>
+
+      {/* First-run onboarding (hides itself once all steps are done) */}
+      {onboarding && (
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+          <OnboardingChecklist status={onboarding} />
+        </motion.div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">

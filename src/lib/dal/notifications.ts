@@ -25,6 +25,13 @@ export async function getNotifications(): Promise<Notification[]> {
   }));
 }
 
+// Drops a "you haven't logged today" reminder into the caller's bell if they're
+// in a group and haven't submitted today. Idempotent per day (enforced in SQL).
+export async function maybeCreateDailyReminder() {
+  const supabase = createClient();
+  await supabase.rpc("maybe_create_daily_reminder");
+}
+
 export async function getUnreadCount(): Promise<number> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

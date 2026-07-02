@@ -8,7 +8,7 @@ import {
   Menu, X,
 } from "lucide-react";
 import { getCurrentUser, signOut } from "@/lib/dal/auth";
-import { getUnreadCount } from "@/lib/dal/notifications";
+import { getUnreadCount, maybeCreateDailyReminder } from "@/lib/dal/notifications";
 import type { User } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
@@ -37,6 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (currentUser) {
           setUser(currentUser);
         }
+        // Create today's reminder (if needed) before counting unread.
+        await maybeCreateDailyReminder();
         const count = await getUnreadCount();
         setUnreadCount(count);
       } catch (err) {

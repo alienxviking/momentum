@@ -10,7 +10,7 @@ export interface User {
   avatar_url: string;
   bio: string;
   accountability_score: number;
-  email_reminders?: boolean;
+  reminders_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }

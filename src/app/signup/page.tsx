@@ -93,7 +93,7 @@ export default function SignupPage() {
           </div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>Start your journey today.</h2>
           <p className="text-base leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-            Join thousands of achievers who track habits, build streaks, and hold each other accountable.
+            Track habits, build streaks, and hold each other accountable with your group.
           </p>
           <div className="mt-12 space-y-4">
             {[{ emoji: "🎯", text: "Set and track daily habits" }, { emoji: "👥", text: "Join accountability groups" }, { emoji: "📈", text: "Visualize your progress" }].map((item) => (

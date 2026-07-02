@@ -66,10 +66,10 @@ const features = [
 ];
 
 const stats = [
-  { value: "10K+", label: "Active Users" },
-  { value: "500+", label: "Groups Created" },
-  { value: "2M+", label: "Habits Tracked" },
-  { value: "95%", label: "Consistency Rate" },
+  { value: "Free", label: "No credit card, ever" },
+  { value: "Private", label: "Your data stays yours" },
+  { value: "Groups", label: "Accountability together" },
+  { value: "Streaks", label: "Build lasting habits" },
 ];
 
 export default function LandingPage() {
@@ -320,7 +320,7 @@ export default function LandingPage() {
             Ready to build <span className="gradient-text-fire">unstoppable momentum</span>?
           </h2>
           <p className="text-lg mb-10" style={{ color: "var(--color-text-secondary)" }}>
-            Join thousands who are achieving their goals through social accountability.
+            Build better habits with your group through social accountability.
           </p>
           <Link href="/signup" className="btn-primary text-lg px-10 py-4">
             Get Started — It&apos;s Free <ArrowRight className="w-5 h-5" />

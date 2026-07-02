@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Check, CheckCheck, MessageSquare, Flame, BarChart3, Users, Star } from "lucide-react";
 import { toast } from "sonner";
 import { getNotifications, markAsRead, markAllAsRead } from "@/lib/dal/notifications";
@@ -18,6 +19,7 @@ const typeIcons: Record<string, { icon: typeof Bell; color: string }> = {
 };
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const unread = notifications.filter((n) => !n.is_read).length;
@@ -59,6 +61,19 @@ export default function NotificationsPage() {
     }
   };
 
+  // Open a notification: mark it read (optimistically) and go to its target.
+  const handleOpen = async (notif: Notification) => {
+    if (!notif.is_read) {
+      setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, is_read: true } : n));
+      try {
+        await markAsRead(notif.id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    if (notif.link) router.push(notif.link);
+  };
+
   if (loading) {
     return <PageSpinner />;
   }
@@ -88,7 +103,10 @@ export default function NotificationsPage() {
             const Icon = config.icon;
             return (
               <motion.div key={notif.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <div className="glass-card p-5 flex items-start gap-3"
+                <div className="glass-card glass-card-interactive p-5 flex items-start gap-3"
+                  role="button" tabIndex={0}
+                  onClick={() => handleOpen(notif)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleOpen(notif); } }}
                   style={{ opacity: notif.is_read ? 0.6 : 1 }}>
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${config.color}20` }}>
                     <Icon className="w-5 h-5" style={{ color: config.color }} />
@@ -104,7 +122,7 @@ export default function NotificationsPage() {
                     </span>
                   </div>
                   {!notif.is_read && (
-                    <button onClick={() => handleMarkRead(notif.id)} className="p-1 rounded-md transition-colors" style={{ color: "var(--color-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-accent-primary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
+                    <button onClick={(e) => { e.stopPropagation(); handleMarkRead(notif.id); }} className="p-1 rounded-md transition-colors" style={{ color: "var(--color-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-accent-primary)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
                       <Check className="w-4 h-4" />
                     </button>
                   )}

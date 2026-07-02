@@ -15,6 +15,7 @@ import { joinGroupByInvite } from "@/lib/dal/groups";
 import { useUserStore } from "@/lib/user-store";
 import { useGroupsStore } from "@/lib/groups-store";
 import { useDashboardStore } from "@/lib/dashboard-store";
+import { useHabitsStore } from "@/lib/habits-store";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
 
@@ -92,6 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       clearUser();
       useGroupsStore.getState().clearGroups();
       useDashboardStore.getState().clear();
+      useHabitsStore.getState().clear();
       await signOut();
       window.location.href = "/login";
     } catch (err) {

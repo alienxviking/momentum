@@ -8,6 +8,7 @@ import type { Habit, HeatmapDay } from "@/lib/types";
 import { PageSpinner, EmptyState } from "@/components/ui";
 import { toast } from "sonner";
 import { EditHabitModal } from "./edit-habit-modal";
+import { useHabitsStore } from "@/lib/habits-store";
 
 function HabitHeatmap({ data }: { data: HeatmapDay[] }) {
   const weeks: HeatmapDay[][] = [];
@@ -67,6 +68,17 @@ export default function HabitsPage() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
   useEffect(() => {
+    // Paint cached habits + heatmap instantly, then revalidate in the background.
+    useHabitsStore.persist.rehydrate();
+    const cached = useHabitsStore.getState().data;
+    if (cached) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setHabits(cached.habits);
+      setHeatmap(cached.heatmap);
+      setLoading(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+
     async function loadHabitsData() {
       try {
         const [currentHabits, currentHeatmap] = await Promise.all([
@@ -75,6 +87,7 @@ export default function HabitsPage() {
         ]);
         setHabits(currentHabits);
         setHeatmap(currentHeatmap);
+        useHabitsStore.getState().setData({ habits: currentHabits, heatmap: currentHeatmap });
       } catch (err) {
         console.error("Error loading habits page data", err);
         toast.error("Couldn't load your habits. Please refresh.");
@@ -88,20 +101,20 @@ export default function HabitsPage() {
   const toggleHabit = async (id: string) => {
     try {
       const isCompleted = await toggleHabitCompletion(id);
-      setHabits((prev) =>
-        prev.map((h) =>
-          h.id === id
-            ? {
-                ...h,
-                completed_today: isCompleted,
-                streak: (h.streak || 0) + (isCompleted ? 1 : (h.streak || 0) > 0 ? -1 : 0),
-              }
-            : h
-        )
+      const newHabits = habits.map((h) =>
+        h.id === id
+          ? {
+              ...h,
+              completed_today: isCompleted,
+              streak: (h.streak || 0) + (isCompleted ? 1 : (h.streak || 0) > 0 ? -1 : 0),
+            }
+          : h
       );
+      setHabits(newHabits);
       // Reload heatmap
       const newHeatmap = await getHeatmapData();
       setHeatmap(newHeatmap);
+      useHabitsStore.getState().setData({ habits: newHabits, heatmap: newHeatmap });
       toast.success(isCompleted ? "Habit completed! 🔥" : "Habit unmarked");
     } catch (err) {
       console.error("Failed to toggle habit", err);
@@ -111,7 +124,7 @@ export default function HabitsPage() {
 
   const completedCount = habits.filter((h) => h.completed_today).length;
 
-  if (loading) {
+  if (loading && habits.length === 0) {
     return <PageSpinner />;
   }
 
@@ -184,8 +197,16 @@ export default function HabitsPage() {
         <EditHabitModal
           habit={editingHabit}
           onClose={() => setEditingHabit(null)}
-          onSaved={(updated) => setHabits((prev) => prev.map((h) => (h.id === updated.id ? { ...h, ...updated } : h)))}
-          onDeleted={(id) => setHabits((prev) => prev.filter((h) => h.id !== id))}
+          onSaved={(updated) => {
+            const next = habits.map((h) => (h.id === updated.id ? { ...h, ...updated } : h));
+            setHabits(next);
+            useHabitsStore.getState().setData({ habits: next, heatmap });
+          }}
+          onDeleted={(id) => {
+            const next = habits.filter((h) => h.id !== id);
+            setHabits(next);
+            useHabitsStore.getState().setData({ habits: next, heatmap });
+          }}
         />
       )}
     </div>

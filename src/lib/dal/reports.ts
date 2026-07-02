@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
-import type { DailyReport, Comment } from "@/lib/types";
+import type { DailyReport, Comment, EvidenceUpload } from "@/lib/types";
+
+// Evidence lives in a private bucket; rows store the storage path in `file_url`.
+// Signed URLs are short-lived so evidence isn't publicly reachable.
+const EVIDENCE_URL_TTL = 60 * 60; // 1 hour
 
 export async function getReports(groupId?: string): Promise<DailyReport[]> {
   const supabase = createClient();
@@ -19,7 +23,7 @@ export async function getReports(groupId?: string): Promise<DailyReport[]> {
   const { data: reports } = await query;
   if (!reports) return [];
 
-  return reports.map((r) => {
+  const mapped = reports.map((r) => {
     const p = r.profiles as Record<string, unknown>;
     
     const rawComments = (r.comments || []) as any[];
@@ -117,9 +121,35 @@ export async function getReports(groupId?: string): Promise<DailyReport[]> {
         : undefined,
       reactions: reactionsList,
       comments: commentsList,
-      evidence: r.evidence_uploads || [],
+      evidence: (r.evidence_uploads || []) as EvidenceUpload[],
     };
   });
+
+  // Replace stored storage paths with short-lived signed URLs for rendering.
+  const paths = mapped
+    .flatMap((r) => r.evidence ?? [])
+    .map((e) => e.file_url)
+    .filter(Boolean);
+
+  if (paths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("evidence")
+      .createSignedUrls(paths, EVIDENCE_URL_TTL);
+
+    const urlByPath = new Map(
+      (signed ?? [])
+        .filter((s) => s.path && s.signedUrl)
+        .map((s) => [s.path as string, s.signedUrl])
+    );
+
+    for (const r of mapped) {
+      for (const e of r.evidence ?? []) {
+        e.file_url = urlByPath.get(e.file_url) ?? e.file_url;
+      }
+    }
+  }
+
+  return mapped;
 }
 
 export async function submitReport(data: {
@@ -161,14 +191,11 @@ export async function submitReport(data: {
         .upload(filePath, file);
 
       if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("evidence")
-          .getPublicUrl(filePath);
-
+        // Store the storage path; signed URLs are generated at read time.
         await supabase.from("evidence_uploads").insert({
           report_id: report.id,
           user_id: user.id,
-          file_url: publicUrl,
+          file_url: filePath,
           file_type: file.type,
           file_name: file.name
         });
@@ -329,14 +356,11 @@ export async function uploadAdditionalEvidence(reportId: string, files: File[]) 
         .upload(filePath, file);
 
       if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("evidence")
-          .getPublicUrl(filePath);
-
+        // Store the storage path; signed URLs are generated at read time.
         await supabase.from("evidence_uploads").insert({
           report_id: reportId,
           user_id: user.id,
-          file_url: publicUrl,
+          file_url: filePath,
           file_type: file.type,
           file_name: file.name
         });

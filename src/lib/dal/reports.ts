@@ -323,6 +323,21 @@ export async function addComment(
   if (error) throw error;
 }
 
+// Deletes a report the caller owns. Cascades to its comments, reactions, and
+// evidence rows (per the schema's ON DELETE CASCADE).
+export async function deleteReport(reportId: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("daily_reports")
+    .delete()
+    .eq("id", reportId)
+    .eq("user_id", user.id);
+  if (error) throw error;
+}
+
 export async function updateComment(commentId: string, content: string) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

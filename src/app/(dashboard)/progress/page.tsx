@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Plus, Clock, CheckCircle2, MessageSquare, ThumbsUp } from "lucide-react";
+import { Plus, Clock, CheckCircle2, MessageSquare, ThumbsUp, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getReports, addReaction, uploadAdditionalEvidence } from "@/lib/dal/reports";
+import { getReports, addReaction, uploadAdditionalEvidence, deleteReport } from "@/lib/dal/reports";
 import { MOOD_EMOJIS } from "@/lib/constants";
 import type { DailyReport, Reaction } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
@@ -90,6 +90,20 @@ export default function ProgressPage() {
       toast.error("Couldn't upload evidence. Please try again.");
     } finally {
       setUploadingEvidenceId(null);
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    if (!window.confirm("Delete this report? Its comments and reactions go with it.")) return;
+    const prev = reports;
+    setReports((rs) => rs.filter((r) => r.id !== reportId));
+    try {
+      await deleteReport(reportId);
+      toast.success("Report deleted.");
+    } catch (err) {
+      console.error("Failed to delete report", err);
+      toast.error("Couldn't delete the report. Please try again.");
+      setReports(prev);
     }
   };
 
@@ -185,24 +199,29 @@ export default function ProgressPage() {
                       </div>
 
                       {currentUserId === report.user_id && (
-                        <div className="relative">
-                          {uploadingEvidenceId === report.id ? (
-                            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Uploading...</span>
-                          ) : (
-                            <>
-                              <input 
-                                type="file" 
-                                id={`evidence-upload-${report.id}`} 
-                                className="hidden" 
-                                multiple 
-                                accept="image/*,video/*" 
-                                onChange={(e) => handleUploadAdditionalEvidence(report.id, e.target.files)} 
-                              />
-                              <label htmlFor={`evidence-upload-${report.id}`} className="cursor-pointer flex items-center gap-1 text-xs font-medium transition-colors hover:text-emerald-400" style={{ color: "var(--color-text-secondary)" }}>
-                                <ImageIcon className="w-3.5 h-3.5" /> Add Proof
-                              </label>
-                            </>
-                          )}
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            {uploadingEvidenceId === report.id ? (
+                              <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Uploading...</span>
+                            ) : (
+                              <>
+                                <input
+                                  type="file"
+                                  id={`evidence-upload-${report.id}`}
+                                  className="hidden"
+                                  multiple
+                                  accept="image/*,video/*"
+                                  onChange={(e) => handleUploadAdditionalEvidence(report.id, e.target.files)}
+                                />
+                                <label htmlFor={`evidence-upload-${report.id}`} className="cursor-pointer flex items-center gap-1 text-xs font-medium transition-colors hover:text-emerald-400" style={{ color: "var(--color-text-secondary)" }}>
+                                  <ImageIcon className="w-3.5 h-3.5" /> Add Proof
+                                </label>
+                              </>
+                            )}
+                          </div>
+                          <button onClick={() => handleDeleteReport(report.id)} className="flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-80" style={{ color: "var(--color-danger)" }}>
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
                         </div>
                       )}
                     </div>

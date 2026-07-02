@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { getCurrentUser, updateProfile, uploadAvatar } from "@/lib/dal/auth";
 import { getDashboardStats } from "@/lib/dal/analytics";
+import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { Flame, Target, TrendingUp, Calendar, Camera } from "lucide-react";
 import { PageSpinner, Spinner, Avatar } from "@/components/ui";
 import type { User, DashboardStats } from "@/lib/types";
@@ -15,6 +16,9 @@ export default function ProfilePage() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -45,6 +49,17 @@ export default function ProfilePage() {
       }
     }
     loadProfileData();
+  }, []);
+
+  useEffect(() => {
+    if (!isPushSupported()) return;
+    // Set state from the async continuation (not synchronously in the effect).
+    getPushSubscription()
+      .then((sub) => {
+        setPushSupported(true);
+        setPushEnabled(!!sub);
+      })
+      .catch(() => setPushSupported(true));
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -119,6 +134,26 @@ export default function ProfilePage() {
       console.error(err);
       setRemindersEnabled(!next);
       toast.error("Couldn't update your reminder preference. Please try again.");
+    }
+  };
+
+  const handleTogglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+        toast.success("Push notifications turned off.");
+      } else {
+        await subscribeToPush();
+        setPushEnabled(true);
+        toast.success("Push notifications turned on.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Couldn't update push notifications.");
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -258,6 +293,36 @@ export default function ProfilePage() {
             <span
               className="inline-block h-4 w-4 rounded-full bg-white transition-transform"
               style={{ transform: remindersEnabled ? "translateX(22px)" : "translateX(3px)", marginTop: "3px" }}
+            />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 mt-5 pt-5" style={{ borderTop: "1px solid var(--color-border-subtle)" }}>
+          <div className="min-w-0">
+            <p className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>Push notifications</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+              {pushSupported
+                ? "Get reminders on this device even when the app is closed."
+                : "This browser doesn't support push notifications."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={pushEnabled}
+            disabled={!pushSupported || pushBusy}
+            onClick={handleTogglePush}
+            className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors"
+            style={{
+              background: pushEnabled ? "var(--color-accent-primary)" : "var(--color-bg-tertiary)",
+              border: "1px solid var(--color-border-default)",
+              opacity: !pushSupported || pushBusy ? 0.5 : 1,
+              cursor: !pushSupported || pushBusy ? "not-allowed" : "pointer",
+            }}
+          >
+            <span
+              className="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+              style={{ transform: pushEnabled ? "translateX(22px)" : "translateX(3px)", marginTop: "3px" }}
             />
           </button>
         </div>

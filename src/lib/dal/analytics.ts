@@ -90,7 +90,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       ? Math.round(((weeklyCompleted || 0) / weeklyPossible) * 100)
       : 0;
 
-  // Profile accountability score
+  // Recompute the caller's accountability score from the trailing 30 days
+  // (also applies decay when they've been inactive), then read it back.
+  await supabase.rpc("recalculate_accountability_score");
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("accountability_score")

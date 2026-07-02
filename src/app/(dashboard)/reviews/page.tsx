@@ -2,13 +2,13 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, Send, CalendarDays } from "lucide-react";
+import { CheckCircle2, Clock, Send, CalendarDays, Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import { getReports, addComment, addReaction } from "@/lib/dal/reports";
+import { getReports, addComment, addReaction, updateComment, deleteComment } from "@/lib/dal/reports";
 import { getCurrentUser } from "@/lib/dal/auth";
 import { MOOD_EMOJIS, REACTION_CONFIG } from "@/lib/constants";
 import { PageSpinner, EmptyState, Avatar, Badge } from "@/components/ui";
-import { ReactionType, DailyReport, User, Reaction } from "@/lib/types";
+import { ReactionType, DailyReport, User, Reaction, Comment } from "@/lib/types";
 
 export default function ReviewsPage() {
   const [reports, setReports] = useState<DailyReport[]>([]);
@@ -16,6 +16,7 @@ export default function ReviewsPage() {
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [submittingComment, setSubmittingComment] = useState<Record<string, boolean>>({});
+  const [editingComment, setEditingComment] = useState<{ id: string; text: string } | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -96,6 +97,39 @@ export default function ReviewsPage() {
       toast.error("Couldn't post your comment. Please try again.");
     } finally {
       setSubmittingComment(prev => ({ ...prev, [reportId]: false }));
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingComment) return;
+    const { id, text } = editingComment;
+    if (!text.trim()) return;
+    setEditingComment(null);
+    setReports((prev) =>
+      prev.map((r) => ({ ...r, comments: (r.comments || []).map((c) => (c.id === id ? { ...c, content: text.trim() } : c)) }))
+    );
+    try {
+      await updateComment(id, text.trim());
+      toast.success("Comment updated.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't update your comment. Please try again.");
+      setReports(await getReports());
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (!window.confirm("Delete this comment?")) return;
+    setReports((prev) =>
+      prev.map((r) => ({ ...r, comments: (r.comments || []).filter((c) => c.id !== id) }))
+    );
+    try {
+      await deleteComment(id);
+      toast.success("Comment deleted.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't delete your comment. Please try again.");
+      setReports(await getReports());
     }
   };
 
@@ -206,19 +240,43 @@ export default function ReviewsPage() {
                 {/* Comments */}
                 {comments.length > 0 && (
                   <div className="space-y-3 pt-2">
-                    {comments.map((comment) => (
+                    {comments.map((comment: Comment) => {
+                      const isOwn = comment.user_id === currentUser?.id;
+                      const isEditing = editingComment?.id === comment.id;
+                      return (
                       <div key={comment.id}>
                         <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>
                           <Avatar src={comment.user?.avatar_url} name={comment.user?.full_name} size="sm" className="flex-shrink-0" />
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold" style={{ color: "var(--color-text-primary)" }}>{comment.user?.full_name}</span>
                               {comment.feedback_type !== "general" && (
                                 <Badge variant="accent" className="text-[10px]">{comment.feedback_type?.replace(/_/g, " ")}</Badge>
                               )}
                             </div>
-                            <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>{comment.content}</p>
+                            {isEditing ? (
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <input value={editingComment.text} autoFocus
+                                  onChange={(e) => setEditingComment({ id: comment.id, text: e.target.value })}
+                                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingComment(null); }}
+                                  className="input-field flex-1 text-xs py-1" />
+                                <button onClick={handleSaveEdit} aria-label="Save" className="btn-primary p-1.5"><Check className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setEditingComment(null)} aria-label="Cancel" className="btn-secondary p-1.5"><X className="w-3.5 h-3.5" /></button>
+                              </div>
+                            ) : (
+                              <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>{comment.content}</p>
+                            )}
                           </div>
+                          {isOwn && !isEditing && (
+                            <div className="flex items-center gap-1 flex-shrink-0" style={{ color: "var(--color-text-muted)" }}>
+                              <button onClick={() => setEditingComment({ id: comment.id, text: comment.content })} aria-label="Edit comment" className="p-1 rounded-md hover:opacity-70 transition-opacity">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => handleDeleteComment(comment.id)} aria-label="Delete comment" className="p-1 rounded-md hover:opacity-70 transition-opacity">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         {/* Replies */}
                         {comment.replies?.map((reply) => (
@@ -231,7 +289,8 @@ export default function ReviewsPage() {
                           </div>
                         ))}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

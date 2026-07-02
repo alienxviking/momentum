@@ -61,10 +61,12 @@ export function StatCard({
             </div>
           </div>
           {ring ? (
-            <ProgressRing value={ring.value} max={ring.max} color={ring.color} />
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <ProgressRing value={ring.value} max={ring.max} color={ring.color} size={40} stroke={4} />
+            </div>
           ) : (
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: `${color}20`, color }}
             >
               {icon}

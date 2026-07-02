@@ -1,21 +1,9 @@
 -- ============================================================================
--- Momentum — Weekly Reviews
--- Activates the weekly_reviews table: generate a per-group recap of the most
--- recent completed week for the calling user, and let them edit the reflection.
--- Lazy (called on page load) — no scheduler needed. Run in SQL Editor. Idempotent.
+-- Momentum — Weekly Review "ready" notification
+-- Updates ensure_weekly_reviews() (from migration 014) to drop a single
+-- notification when it generates new reviews. Run in the SQL Editor. Idempotent.
 -- ============================================================================
 
--- Allow users to edit their own reflection text (migration 002 only added
--- SELECT + INSERT for weekly_reviews).
-DROP POLICY IF EXISTS "Users can update own weekly reviews" ON public.weekly_reviews;
-CREATE POLICY "Users can update own weekly reviews"
-  ON public.weekly_reviews FOR UPDATE
-  TO authenticated
-  USING (user_id = auth.uid());
-
--- Generate the caller's weekly reviews for the most recent completed week,
--- one row per group they're in. Never overwrites an existing row (so edited
--- reflections are preserved).
 CREATE OR REPLACE FUNCTION public.ensure_weekly_reviews()
 RETURNS void
 LANGUAGE plpgsql
@@ -23,11 +11,12 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  uid        UUID := auth.uid();
-  wk_start   DATE := (date_trunc('week', CURRENT_DATE)::date - 7); -- last week's Monday
-  wk_end     DATE := (date_trunc('week', CURRENT_DATE)::date - 1); -- last week's Sunday
-  prev_start DATE := (date_trunc('week', CURRENT_DATE)::date - 14);
-  prev_end   DATE := (date_trunc('week', CURRENT_DATE)::date - 8);
+  uid            UUID := auth.uid();
+  wk_start       DATE := (date_trunc('week', CURRENT_DATE)::date - 7); -- last week's Monday
+  wk_end         DATE := (date_trunc('week', CURRENT_DATE)::date - 1); -- last week's Sunday
+  prev_start     DATE := (date_trunc('week', CURRENT_DATE)::date - 14);
+  prev_end       DATE := (date_trunc('week', CURRENT_DATE)::date - 8);
+  inserted_count INT;
 BEGIN
   IF uid IS NULL THEN
     RETURN;
@@ -58,12 +47,10 @@ BEGIN
            WHERE hl.user_id = uid AND hl.is_completed
              AND hl.completion_date BETWEEN wk_start AND wk_end)
     ),
-    -- Activity momentum: active days this week minus previous week.
     (SELECT COUNT(DISTINCT hl.completion_date) FROM public.habit_logs hl
        WHERE hl.user_id = uid AND hl.is_completed AND hl.completion_date BETWEEN wk_start AND wk_end)
     - (SELECT COUNT(DISTINCT hl.completion_date) FROM public.habit_logs hl
          WHERE hl.user_id = uid AND hl.is_completed AND hl.completion_date BETWEEN prev_start AND prev_end),
-    -- Rank within the group by current accountability score.
     (SELECT r.rnk FROM (
        SELECT gm2.user_id, RANK() OVER (ORDER BY COALESCE(p.accountability_score, 50) DESC) AS rnk
        FROM public.group_members gm2
@@ -73,7 +60,22 @@ BEGIN
   FROM public.group_members gm
   WHERE gm.user_id = uid
   ON CONFLICT (user_id, group_id, week_start) DO NOTHING;
+
+  -- If this run actually produced new review(s), drop a single "ready"
+  -- notification (once per week, guarded against duplicates).
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+  IF inserted_count > 0 AND NOT EXISTS (
+    SELECT 1 FROM public.notifications
+    WHERE user_id = uid AND type = 'weekly_review' AND created_at >= wk_start
+  ) THEN
+    INSERT INTO public.notifications (user_id, type, title, message, link)
+    VALUES (
+      uid,
+      'weekly_review',
+      'Your weekly review is ready',
+      'See how last week went and set your intention for the next.',
+      '/reviews/weekly'
+    );
+  END IF;
 END;
 $$;
-
-GRANT EXECUTE ON FUNCTION public.ensure_weekly_reviews() TO authenticated;

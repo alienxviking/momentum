@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { getCurrentUser, updateProfile, uploadAvatar } from "@/lib/dal/auth";
 import { getDashboardStats, getUserAchievementStats, type AchievementStats } from "@/lib/dal/analytics";
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
+import { useUserStore } from "@/lib/user-store";
 import { Achievements } from "./achievements";
 import { Flame, Target, TrendingUp, Calendar, Camera } from "lucide-react";
 import { PageSpinner, Spinner, Avatar } from "@/components/ui";
@@ -80,9 +81,11 @@ export default function ProfilePage() {
       });
       setSuccess("Profile updated successfully!");
       toast.success("Profile updated!");
-      // Update local user state
+      // Update local + cached user state so the shell reflects it immediately.
       if (user) {
-        setUser({ ...user, full_name: fullName, username, bio });
+        const updated = { ...user, full_name: fullName, username, bio };
+        setUser(updated);
+        useUserStore.getState().setUser(updated);
       }
     } catch (err) {
       console.error(err);
@@ -111,7 +114,9 @@ export default function ProfilePage() {
     try {
       const publicUrl = await uploadAvatar(file);
       if (user) {
-        setUser({ ...user, avatar_url: publicUrl });
+        const updated = { ...user, avatar_url: publicUrl };
+        setUser(updated);
+        useUserStore.getState().setUser(updated);
       }
       setSuccess("Profile picture updated successfully!");
       toast.success("Profile picture updated!");

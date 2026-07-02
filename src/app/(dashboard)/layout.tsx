@@ -12,7 +12,7 @@ import { getCurrentUser, signOut } from "@/lib/dal/auth";
 import { getUnreadCount, maybeCreateDailyReminder } from "@/lib/dal/notifications";
 import { ensureWeeklyReviews } from "@/lib/dal/weekly";
 import { joinGroupByInvite } from "@/lib/dal/groups";
-import type { User } from "@/lib/types";
+import { useUserStore } from "@/lib/user-store";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
 
@@ -31,50 +31,63 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const user = useUserStore((s) => s.user);
+  const setUser = useUserStore((s) => s.setUser);
+  const clearUser = useUserStore((s) => s.clearUser);
 
+  // Once per app load: hydrate the cached profile, run background generators
+  // (fire-and-forget, off the critical path), and complete any pending invite.
   useEffect(() => {
-    async function loadUserData() {
-      try {
-        const currentUser = await getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-        }
-        // Complete an invite the user opened before signing in (see /join).
-        let pendingInvite: string | null = null;
-        try {
-          pendingInvite = localStorage.getItem("pendingInvite");
-        } catch {
-          // ignore storage errors
-        }
-        if (pendingInvite) {
-          localStorage.removeItem("pendingInvite");
-          try {
-            const groupId = await joinGroupByInvite(pendingInvite);
-            toast.success("You've joined the group!");
-            router.push(`/groups/${groupId}`);
-          } catch (e) {
-            if (!(e instanceof Error && e.message === "Already a member")) {
-              console.error("Failed to complete pending invite", e);
-            }
-          }
-        }
-        // Generate any due reminders / weekly reviews before counting unread,
-        // so their notifications are reflected in the badge.
-        await maybeCreateDailyReminder();
-        await ensureWeeklyReviews();
-        const count = await getUnreadCount();
-        setUnreadCount(count);
-      } catch (err) {
-        console.error("Failed to load user in dashboard layout", err);
-      }
+    useUserStore.persist.rehydrate();
+
+    void maybeCreateDailyReminder();
+    void ensureWeeklyReviews().finally(() => {
+      // Reflect any freshly-created notification in the badge.
+      getUnreadCount().then(setUnreadCount).catch(() => {});
+    });
+
+    let pendingInvite: string | null = null;
+    try {
+      pendingInvite = localStorage.getItem("pendingInvite");
+    } catch {
+      // ignore storage errors
     }
-    loadUserData();
-  }, [pathname, router]);
+    if (pendingInvite) {
+      localStorage.removeItem("pendingInvite");
+      joinGroupByInvite(pendingInvite)
+        .then((groupId) => {
+          toast.success("You've joined the group!");
+          router.push(`/groups/${groupId}`);
+        })
+        .catch((e) => {
+          if (!(e instanceof Error && e.message === "Already a member")) {
+            console.error("Failed to complete pending invite", e);
+          }
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Revalidate the cached profile + unread count in the background on each view.
+  // The shell renders instantly from cache while this runs.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getCurrentUser(), getUnreadCount()])
+      .then(([currentUser, count]) => {
+        if (cancelled) return;
+        if (currentUser) setUser(currentUser);
+        setUnreadCount(count);
+      })
+      .catch((err) => console.error("Failed to refresh dashboard shell", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, setUser]);
 
   const handleLogout = async () => {
     try {
+      clearUser();
       await signOut();
       window.location.href = "/login";
     } catch (err) {

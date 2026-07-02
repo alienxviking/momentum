@@ -49,21 +49,26 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }
   });
 
-  // Compute streak (consecutive days with at least one habit logged)
+  // Compute streak (consecutive days with at least one habit logged).
+  // Fetch the last 60 days of completion dates once, then count in memory —
+  // was previously 60 sequential queries.
+  const streakStart = new Date();
+  streakStart.setDate(streakStart.getDate() - 60);
+  const { data: streakLogs } = await supabase
+    .from("habit_logs")
+    .select("completion_date")
+    .eq("user_id", user.id)
+    .eq("is_completed", true)
+    .gte("completion_date", streakStart.toISOString().split("T")[0]);
+
+  const completedDays = new Set((streakLogs || []).map((l) => l.completion_date));
   let streak = 0;
   for (let i = 0; i < 60; i++) {
     const checkDate = new Date();
     checkDate.setDate(checkDate.getDate() - i);
     const dateStr = checkDate.toISOString().split("T")[0];
 
-    const { count } = await supabase
-      .from("habit_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("completion_date", dateStr)
-      .eq("is_completed", true);
-
-    if (count && count > 0) {
+    if (completedDays.has(dateStr)) {
       streak++;
     } else if (i === 0) {
       continue; // today not done yet

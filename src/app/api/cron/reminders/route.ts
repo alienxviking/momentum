@@ -47,9 +47,18 @@ export async function GET(request: Request) {
   const resendKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.REMINDER_FROM_EMAIL;
 
-  if (!supabaseUrl || !serviceKey || !resendKey || !fromEmail) {
+  const missing = [
+    ["NEXT_PUBLIC_SUPABASE_URL", supabaseUrl],
+    ["SUPABASE_SERVICE_ROLE_KEY", serviceKey],
+    ["RESEND_API_KEY", resendKey],
+    ["REMINDER_FROM_EMAIL", fromEmail],
+  ]
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+
+  if (missing.length > 0) {
     return Response.json(
-      { error: "Missing required environment variables." },
+      { error: "Missing required environment variables.", missing },
       { status: 500 }
     );
   }

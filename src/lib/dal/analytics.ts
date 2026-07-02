@@ -235,45 +235,60 @@ export async function getMonthlyTrend() {
   return result;
 }
 
+interface LeaderboardRow {
+  user_id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  score: number;
+  streak: number;
+  consistency: number;
+  improvement: number;
+}
+
 export async function getLeaderboard(groupId: string): Promise<LeaderboardEntry[]> {
   const supabase = createClient();
 
-  const { data: members } = await supabase
-    .from("group_members")
-    .select("user_id, profiles(*)")
-    .eq("group_id", groupId);
+  const { data, error } = await supabase.rpc("get_group_leaderboard", { gid: groupId });
+  if (error || !data) return [];
+  const rows = data as LeaderboardRow[];
+  if (rows.length === 0) return [];
 
-  if (!members) return [];
+  const entries: LeaderboardEntry[] = rows.map((r) => ({
+    rank: 0,
+    user: {
+      id: r.user_id,
+      email: "",
+      username: r.username || "",
+      full_name: r.full_name || "",
+      avatar_url: r.avatar_url || "",
+      bio: "",
+      accountability_score: r.score,
+      created_at: "",
+      updated_at: "",
+    },
+    score: r.score,
+    streak: r.streak,
+    consistency: r.consistency,
+  }));
 
-  const entries: LeaderboardEntry[] = members.map((m, i) => {
-    const p = m.profiles as unknown as Record<string, unknown> | null;
-    return {
-      rank: i + 1,
-      user: {
-        id: (p?.id as string) || m.user_id,
-        email: "",
-        username: (p?.username as string) || "",
-        full_name: (p?.full_name as string) || "",
-        avatar_url: (p?.avatar_url as string) || "",
-        bio: "",
-        accountability_score: (p?.accountability_score as number) || 50,
-        created_at: (p?.created_at as string) || "",
-        updated_at: (p?.updated_at as string) || "",
-      },
-      score: (p?.accountability_score as number) || 50,
-      streak: 0,
-      consistency: 0,
-    };
-  });
-
-  // Sort by score descending
   entries.sort((a, b) => b.score - a.score);
   entries.forEach((e, i) => (e.rank = i + 1));
 
-  // Add badges
+  // Real badges — one per member, highest-priority badge wins.
   if (entries.length > 0) entries[0].badge = "top_performer";
-  if (entries.length > 1) entries[1].badge = "longest_streak";
-  if (entries.length > 2) entries[2].badge = "most_improved";
+
+  const streakLeader = rows.reduce((best, r) => (r.streak > best.streak ? r : best), rows[0]);
+  if (streakLeader.streak > 0) {
+    const e = entries.find((x) => x.user.id === streakLeader.user_id);
+    if (e && !e.badge) e.badge = "longest_streak";
+  }
+
+  const improveLeader = rows.reduce((best, r) => (r.improvement > best.improvement ? r : best), rows[0]);
+  if (improveLeader.improvement > 0) {
+    const e = entries.find((x) => x.user.id === improveLeader.user_id);
+    if (e && !e.badge) e.badge = "most_improved";
+  }
 
   return entries;
 }

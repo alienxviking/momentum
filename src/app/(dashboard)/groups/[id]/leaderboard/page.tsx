@@ -102,7 +102,8 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate" style={{ color: "var(--color-text-primary)" }}>{entry.user.full_name}</div>
                 <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
-                  <span>Score: {entry.score}</span>
+                  <span>🔥 {entry.streak}d streak</span>
+                  <span>{entry.consistency}% consistent</span>
                 </div>
               </div>
               {entry.badge && badgeLabels[entry.badge] && (

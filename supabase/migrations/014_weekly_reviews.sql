@@ -23,11 +23,12 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  uid        UUID := auth.uid();
-  wk_start   DATE := (date_trunc('week', CURRENT_DATE)::date - 7); -- last week's Monday
-  wk_end     DATE := (date_trunc('week', CURRENT_DATE)::date - 1); -- last week's Sunday
-  prev_start DATE := (date_trunc('week', CURRENT_DATE)::date - 14);
-  prev_end   DATE := (date_trunc('week', CURRENT_DATE)::date - 8);
+  uid            UUID := auth.uid();
+  wk_start       DATE := (date_trunc('week', CURRENT_DATE)::date - 7); -- last week's Monday
+  wk_end         DATE := (date_trunc('week', CURRENT_DATE)::date - 1); -- last week's Sunday
+  prev_start     DATE := (date_trunc('week', CURRENT_DATE)::date - 14);
+  prev_end       DATE := (date_trunc('week', CURRENT_DATE)::date - 8);
+  inserted_count INT;
 BEGIN
   IF uid IS NULL THEN
     RETURN;
@@ -73,6 +74,23 @@ BEGIN
   FROM public.group_members gm
   WHERE gm.user_id = uid
   ON CONFLICT (user_id, group_id, week_start) DO NOTHING;
+
+  -- If this run actually produced new review(s), drop a single "ready"
+  -- notification (once per week, guarded against duplicates).
+  GET DIAGNOSTICS inserted_count = ROW_COUNT;
+  IF inserted_count > 0 AND NOT EXISTS (
+    SELECT 1 FROM public.notifications
+    WHERE user_id = uid AND type = 'weekly_review' AND created_at >= wk_start
+  ) THEN
+    INSERT INTO public.notifications (user_id, type, title, message, link)
+    VALUES (
+      uid,
+      'weekly_review',
+      'Your weekly review is ready',
+      'See how last week went and set your intention for the next.',
+      '/reviews/weekly'
+    );
+  END IF;
 END;
 $$;
 

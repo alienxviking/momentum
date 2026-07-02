@@ -32,6 +32,13 @@ export async function getWeeklyReviews(): Promise<WeeklyReview[]> {
   }));
 }
 
+// Fire-and-forget generation (used on app load so the "ready" notification
+// appears in the bell even before the user opens the weekly view).
+export async function ensureWeeklyReviews() {
+  const supabase = createClient();
+  await supabase.rpc("ensure_weekly_reviews");
+}
+
 export async function updateWeeklyReviewText(id: string, text: string) {
   const supabase = createClient();
   const { error } = await supabase

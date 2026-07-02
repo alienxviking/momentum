@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { getCurrentUser, signOut } from "@/lib/dal/auth";
 import { getUnreadCount, maybeCreateDailyReminder } from "@/lib/dal/notifications";
+import { ensureWeeklyReviews } from "@/lib/dal/weekly";
 import type { User } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
@@ -37,8 +38,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (currentUser) {
           setUser(currentUser);
         }
-        // Create today's reminder (if needed) before counting unread.
+        // Generate any due reminders / weekly reviews before counting unread,
+        // so their notifications are reflected in the badge.
         await maybeCreateDailyReminder();
+        await ensureWeeklyReviews();
         const count = await getUnreadCount();
         setUnreadCount(count);
       } catch (err) {

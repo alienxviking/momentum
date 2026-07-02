@@ -108,7 +108,7 @@ export default function DashboardPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--color-text-primary)" }}>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "var(--color-text-primary)" }}>
           {getGreeting()}, {user?.full_name || "Achiever"} 👋
         </h1>
         <p className="text-sm mt-2" style={{ color: "var(--color-text-secondary)" }}>Here&apos;s your progress overview for today.</p>
@@ -123,8 +123,8 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard index={1} label="Current Streak" value={activeStats.current_streak} suffix=" days" color="#f97316" accent="orange"
-          icon={<Flame className="w-5 h-5" />} extra={<span className="streak-fire text-2xl ml-1">🔥</span>} />
+        <StatCard index={1} label="Current Streak" value={activeStats.current_streak} suffix={activeStats.current_streak === 1 ? " day" : " days"} color="#f97316" accent="orange"
+          icon={<Flame className="w-5 h-5" />} />
         <StatCard index={2} label="Habits Today" value={activeStats.habits_completed_today} color="#059669" accent="green"
           icon={<CheckCircle2 className="w-5 h-5" />} suffix={`/${activeStats.total_habits_today}`}
           ring={{ value: activeStats.habits_completed_today, max: activeStats.total_habits_today, color: "#059669" }} />

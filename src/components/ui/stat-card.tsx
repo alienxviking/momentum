@@ -54,7 +54,7 @@ export function StatCard({
               {label}
             </p>
             <div className="flex items-center">
-              <span className="text-2xl font-bold" style={{ color: "var(--color-text-primary)" }}>
+              <span className="text-xl sm:text-2xl font-bold whitespace-nowrap" style={{ color: "var(--color-text-primary)" }}>
                 <CountUp value={value} decimals={decimals} prefix={prefix} suffix={suffix} />
               </span>
               {extra}

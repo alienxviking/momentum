@@ -4,6 +4,10 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
+// "Ascent" mark — rising chevrons, emerald→cyan. Rendered from a data-URI SVG so
+// the gradient + strokes rasterize cleanly through next/og (Satori + resvg).
+const mark = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 32 32"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="16" y1="7" x2="16" y2="25"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><g fill="none" stroke="url(#g)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14 L16 7 L24 14"/><path d="M8 25 L16 18 L24 25"/></g></svg>`;
+
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -17,15 +21,13 @@ export default function AppleIcon() {
           background: "#050a08",
         }}
       >
-        <svg
-          width="120"
-          height="120"
-          viewBox="0 0 24 24"
-          fill="#059669"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
-        </svg>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          width={120}
+          height={120}
+          src={`data:image/svg+xml;utf8,${encodeURIComponent(mark)}`}
+          alt=""
+        />
       </div>
     ),
     { ...size }

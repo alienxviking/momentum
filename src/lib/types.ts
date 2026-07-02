@@ -191,6 +191,28 @@ export interface AccountabilityScore {
   recorded_at: string;
 }
 
+export type ChallengeGoal = "reports" | "habits" | "hours";
+
+export interface Challenge {
+  id: string;
+  group_id: string;
+  title: string;
+  description?: string;
+  goal_type: ChallengeGoal;
+  target: number;
+  start_date: string;
+  end_date: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface ChallengeProgress {
+  user_id: string;
+  full_name: string;
+  avatar_url: string;
+  progress: number;
+}
+
 // Dashboard stats
 export interface DashboardStats {
   current_streak: number;

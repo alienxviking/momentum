@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Users, Trophy, Copy, Settings, Crown, Check, Link2 } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Copy, Settings, Crown, Check, Link2, Target } from "lucide-react";
 import { getGroupById, getGroupMembers } from "@/lib/dal/groups";
 import { getLeaderboard } from "@/lib/dal/analytics";
 import { GROUP_CATEGORIES } from "@/lib/constants";
@@ -94,7 +94,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               <span>{group.is_public ? "🌐 Public" : "🔒 Private"}</span>
             </div>
           </div>
-          <Link href={`/groups/${id}/settings`} className="btn-secondary p-2"><Settings className="w-4 h-4" /></Link>
+          <Link href={`/groups/${id}/challenges`} className="btn-secondary p-2" aria-label="Challenges"><Target className="w-4 h-4" /></Link>
+          <Link href={`/groups/${id}/settings`} className="btn-secondary p-2" aria-label="Group settings"><Settings className="w-4 h-4" /></Link>
         </div>
         {/* Invite */}
         <div className="mt-4 flex items-center gap-2 p-3 rounded-xl" style={{ background: "var(--color-bg-tertiary)" }}>

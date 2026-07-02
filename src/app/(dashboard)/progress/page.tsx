@@ -115,7 +115,7 @@ export default function ProgressPage() {
     <div className="max-w-4xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--color-text-primary)" }}>Progress Reports</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "var(--color-text-primary)" }}>Progress Reports</h1>
           <p className="text-sm mt-2" style={{ color: "var(--color-text-secondary)" }}>View and submit daily progress reports</p>
         </div>
         <Link href="/progress/submit" className="btn-primary"><Plus className="w-4 h-4" /> Submit Report</Link>
@@ -188,18 +188,16 @@ export default function ProgressPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: "1px solid var(--color-border-subtle)" }}>
-                      <div className="flex items-center gap-4">
-                        <button onClick={() => handleLike(report.id)} className="flex items-center gap-1.5 text-xs font-medium transition-colors" style={{ color: hasLiked ? "var(--color-success)" : "var(--color-text-muted)" }}>
-                          <ThumbsUp className="w-3.5 h-3.5" /> Like ({likesCount})
-                        </button>
-                        <Link href="/reviews" className="flex items-center gap-1 text-xs font-medium hover:opacity-80 transition-opacity" style={{ color: "var(--color-accent-primary)" }}>
-                          <MessageSquare className="w-3.5 h-3.5" /> Comments ({report.comments?.length || 0})
-                        </Link>
-                      </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 pt-3" style={{ borderTop: "1px solid var(--color-border-subtle)" }}>
+                      <button onClick={() => handleLike(report.id)} className="flex items-center gap-1.5 text-xs font-medium whitespace-nowrap transition-colors" style={{ color: hasLiked ? "var(--color-success)" : "var(--color-text-muted)" }}>
+                        <ThumbsUp className="w-3.5 h-3.5" /> Like ({likesCount})
+                      </button>
+                      <Link href="/reviews" className="flex items-center gap-1 text-xs font-medium whitespace-nowrap hover:opacity-80 transition-opacity" style={{ color: "var(--color-accent-primary)" }}>
+                        <MessageSquare className="w-3.5 h-3.5" /> Comments ({report.comments?.length || 0})
+                      </Link>
 
                       {currentUserId === report.user_id && (
-                        <div className="flex items-center gap-4">
+                        <>
                           <div className="relative">
                             {uploadingEvidenceId === report.id ? (
                               <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>Uploading...</span>
@@ -213,16 +211,16 @@ export default function ProgressPage() {
                                   accept="image/*,video/*"
                                   onChange={(e) => handleUploadAdditionalEvidence(report.id, e.target.files)}
                                 />
-                                <label htmlFor={`evidence-upload-${report.id}`} className="cursor-pointer flex items-center gap-1 text-xs font-medium transition-colors hover:text-emerald-400" style={{ color: "var(--color-text-secondary)" }}>
+                                <label htmlFor={`evidence-upload-${report.id}`} className="cursor-pointer flex items-center gap-1 text-xs font-medium whitespace-nowrap transition-colors hover:text-emerald-400" style={{ color: "var(--color-text-secondary)" }}>
                                   <ImageIcon className="w-3.5 h-3.5" /> Add Proof
                                 </label>
                               </>
                             )}
                           </div>
-                          <button onClick={() => handleDeleteReport(report.id)} className="flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-80" style={{ color: "var(--color-danger)" }}>
+                          <button onClick={() => handleDeleteReport(report.id)} className="flex items-center gap-1 text-xs font-medium whitespace-nowrap transition-opacity hover:opacity-80" style={{ color: "var(--color-danger)" }}>
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
-                        </div>
+                        </>
                       )}
                     </div>
                   </div>

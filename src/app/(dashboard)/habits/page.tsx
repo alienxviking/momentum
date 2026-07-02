@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Plus, CheckCircle2, Flame } from "lucide-react";
+import { Plus, CheckCircle2, Flame, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getHabits, toggleHabitCompletion, getHeatmapData } from "@/lib/dal/habits";
 import type { Habit, HeatmapDay } from "@/lib/types";
 import { PageSpinner, EmptyState } from "@/components/ui";
 import { toast } from "sonner";
+import { EditHabitModal } from "./edit-habit-modal";
 
 function HabitHeatmap({ data }: { data: HeatmapDay[] }) {
   const weeks: HeatmapDay[][] = [];
@@ -63,6 +64,7 @@ export default function HabitsPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
   useEffect(() => {
     async function loadHabitsData() {
@@ -167,10 +169,25 @@ export default function HabitsPage() {
                 </div>
               )}
               <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: habit.color }} />
+              <button onClick={() => setEditingHabit(habit)} aria-label={`Edit ${habit.name}`}
+                className="p-1.5 rounded-lg transition-colors flex-shrink-0" style={{ color: "var(--color-text-muted)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-primary)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
+                <Pencil className="w-4 h-4" />
+              </button>
             </motion.div>
           ))
         )}
       </div>
+
+      {editingHabit && (
+        <EditHabitModal
+          habit={editingHabit}
+          onClose={() => setEditingHabit(null)}
+          onSaved={(updated) => setHabits((prev) => prev.map((h) => (h.id === updated.id ? { ...h, ...updated } : h)))}
+          onDeleted={(id) => setHabits((prev) => prev.filter((h) => h.id !== id))}
+        />
+      )}
     </div>
   );
 }

@@ -110,6 +110,44 @@ export async function createHabit(data: {
   if (error) throw error;
 }
 
+export async function updateHabit(
+  id: string,
+  data: { name: string; category: string; frequency: string; color: string; icon: string }
+) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("habits")
+    .update({
+      name: data.name,
+      category: data.category,
+      frequency: data.frequency,
+      color: data.color,
+      icon: data.icon,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+}
+
+// Soft-delete: archive so completion history, streaks, and past scores stay intact.
+export async function deleteHabit(id: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("habits")
+    .update({ is_active: false })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+}
+
 export async function toggleHabitCompletion(habitId: string): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

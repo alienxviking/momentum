@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { getMyGroups, joinGroupByInvite } from "@/lib/dal/groups";
 import { GROUP_CATEGORIES } from "@/lib/constants";
 import { PageSpinner, EmptyState, CategoryIcon } from "@/components/ui";
-import type { Group } from "@/lib/types";
+import { useGroupsStore } from "@/lib/groups-store";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -15,7 +15,8 @@ const fadeUp = {
 };
 
 export default function GroupsPage() {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const groups = useGroupsStore((s) => s.groups);
+  const setGroups = useGroupsStore((s) => s.setGroups);
   const [search, setSearch] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -24,19 +25,16 @@ export default function GroupsPage() {
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
-    async function loadGroups() {
-      try {
-        const myGroups = await getMyGroups();
-        setGroups(myGroups);
-      } catch (err) {
+    // Show cached groups instantly, then revalidate in the background.
+    useGroupsStore.persist.rehydrate();
+    getMyGroups()
+      .then(setGroups)
+      .catch((err) => {
         console.error("Error loading groups", err);
         toast.error("Couldn't load your groups. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadGroups();
-  }, []);
+      })
+      .finally(() => setLoading(false));
+  }, [setGroups]);
 
   const handleJoinByCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +66,7 @@ export default function GroupsPage() {
     (g.description || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) {
+  if (loading && groups.length === 0) {
     return <PageSpinner />;
   }
 

@@ -13,6 +13,7 @@ import { getUnreadCount, maybeCreateDailyReminder } from "@/lib/dal/notification
 import { ensureWeeklyReviews } from "@/lib/dal/weekly";
 import { joinGroupByInvite } from "@/lib/dal/groups";
 import { useUserStore } from "@/lib/user-store";
+import { useGroupsStore } from "@/lib/groups-store";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoMark } from "@/components/logo-mark";
 
@@ -88,6 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = async () => {
     try {
       clearUser();
+      useGroupsStore.getState().clearGroups();
       await signOut();
       window.location.href = "/login";
     } catch (err) {

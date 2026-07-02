@@ -9,6 +9,7 @@ import { getDashboardStats, getOnboardingStatus } from "@/lib/dal/analytics";
 import { getHabits, toggleHabitCompletion } from "@/lib/dal/habits";
 import { getMyGroups } from "@/lib/dal/groups";
 import { getReports } from "@/lib/dal/reports";
+import { useGroupsStore } from "@/lib/groups-store";
 import type { User, DashboardStats, Habit, Group, DailyReport } from "@/lib/types";
 import { MOOD_EMOJIS } from "@/lib/constants";
 import { celebrate } from "@/lib/celebrate";
@@ -51,6 +52,7 @@ export default function DashboardPage() {
         setUser(currentUser);
         setStats(currentStats);
         setHabits(currentHabits);
+        useGroupsStore.getState().setGroups(currentGroups); // keep the groups cache warm
         setGroups(currentGroups.slice(0, 3));
         setRecentReports(currentReports.slice(0, 2));
         setOnboarding(onboardingStatus);

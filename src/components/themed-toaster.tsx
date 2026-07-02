@@ -14,7 +14,6 @@ export function ThemedToaster() {
       theme={theme}
       position="bottom-right"
       richColors
-      closeButton
       toastOptions={{
         style: {
           background: "var(--color-bg-elevated)",

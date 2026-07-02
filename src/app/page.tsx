@@ -82,20 +82,20 @@ export default function LandingPage() {
         WebkitBackdropFilter: "blur(12px)",
         borderColor: "var(--color-border-subtle)"
       }}>
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-decoration-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2 text-decoration-none flex-shrink-0">
             <LogoMark className="w-6 h-6" />
-            <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>
+            <span className="text-lg sm:text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>
               Momentum
             </span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-4 flex-shrink-0">
             <ThemeToggle />
-            <Link href="/login" className="text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            <Link href="/login" className="text-sm font-medium px-2 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
               style={{ color: "var(--color-text-secondary)" }}>
               Log In
             </Link>
-            <Link href="/signup" className="btn-primary text-sm">
+            <Link href="/signup" className="btn-primary text-sm whitespace-nowrap">
               Get Started <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -103,7 +103,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-20 px-6 overflow-hidden">
         {/* Ambient depth */}
         <Aurora />
 
@@ -129,7 +129,7 @@ export default function LandingPage() {
             animate="visible"
             variants={fadeUp}
             custom={1}
-            className="text-5xl md:text-7xl font-extrabold leading-tight mb-6"
+            className="text-4xl sm:text-5xl md:text-7xl font-extrabold leading-tight mb-6"
             style={{ color: "var(--color-text-primary)" }}
           >
             Build habits.

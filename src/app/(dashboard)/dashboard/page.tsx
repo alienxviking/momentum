@@ -10,6 +10,7 @@ import { getHabits, toggleHabitCompletion } from "@/lib/dal/habits";
 import { getMyGroups } from "@/lib/dal/groups";
 import { getReports } from "@/lib/dal/reports";
 import { useGroupsStore } from "@/lib/groups-store";
+import { useDashboardStore } from "@/lib/dashboard-store";
 import type { User, DashboardStats, Habit, Group, DailyReport } from "@/lib/types";
 import { MOOD_EMOJIS } from "@/lib/constants";
 import { celebrate } from "@/lib/celebrate";
@@ -39,6 +40,22 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Paint the last-known dashboard instantly, then revalidate in the background.
+    useDashboardStore.persist.rehydrate();
+    const cached = useDashboardStore.getState().data;
+    if (cached) {
+      // Seed local state from the cache post-mount (matches SSR's empty first
+      // render, so no hydration mismatch); React batches these into one render.
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setStats(cached.stats);
+      setHabits(cached.habits);
+      setGroups(cached.groups);
+      setRecentReports(cached.recentReports);
+      setOnboarding(cached.onboarding);
+      setLoading(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+
     async function loadDashboardData() {
       try {
         const [currentUser, currentStats, currentHabits, currentGroups, currentReports, onboardingStatus] = await Promise.all([
@@ -53,9 +70,18 @@ export default function DashboardPage() {
         setStats(currentStats);
         setHabits(currentHabits);
         useGroupsStore.getState().setGroups(currentGroups); // keep the groups cache warm
-        setGroups(currentGroups.slice(0, 3));
-        setRecentReports(currentReports.slice(0, 2));
+        const topGroups = currentGroups.slice(0, 3);
+        const recent = currentReports.slice(0, 2);
+        setGroups(topGroups);
+        setRecentReports(recent);
         setOnboarding(onboardingStatus);
+        useDashboardStore.getState().setData({
+          stats: currentStats,
+          habits: currentHabits,
+          groups: topGroups,
+          recentReports: recent,
+          onboarding: onboardingStatus,
+        });
       } catch (err) {
         console.error("Error loading dashboard data", err);
         toast.error("Couldn't load your dashboard. Please refresh.");
@@ -94,7 +120,7 @@ export default function DashboardPage() {
     return "Good evening";
   };
 
-  if (loading) return <DashboardSkeleton />;
+  if (loading && !stats) return <DashboardSkeleton />;
 
   const activeStats = stats || {
     current_streak: 0,

@@ -142,44 +142,43 @@ export async function getWeeklyProductivity() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const result = [];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  const startStr = start.toISOString().split("T")[0];
 
+  // Two range queries, then bucket in memory (was ~14 sequential queries).
+  const [reportsRes, logsRes] = await Promise.all([
+    supabase.from("daily_reports").select("report_date, hours_worked, productivity_rating").eq("user_id", user.id).gte("report_date", startStr),
+    supabase.from("habit_logs").select("completion_date").eq("user_id", user.id).eq("is_completed", true).gte("completion_date", startStr),
+  ]);
+
+  const reportsByDate = new Map<string, { hours: number; prodSum: number; count: number }>();
+  (reportsRes.data || []).forEach((r) => {
+    const cur = reportsByDate.get(r.report_date) || { hours: 0, prodSum: 0, count: 0 };
+    cur.hours += Number(r.hours_worked) || 0;
+    cur.prodSum += r.productivity_rating || 0;
+    cur.count += 1;
+    reportsByDate.set(r.report_date, cur);
+  });
+
+  const habitsByDate = new Map<string, number>();
+  (logsRes.data || []).forEach((l) => {
+    habitsByDate.set(l.completion_date, (habitsByDate.get(l.completion_date) || 0) + 1);
+  });
+
+  const result = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split("T")[0];
-    const dayName = days[date.getDay()];
-
-    // Hours from reports
-    const { data: reports } = await supabase
-      .from("daily_reports")
-      .select("hours_worked, productivity_rating")
-      .eq("user_id", user.id)
-      .eq("report_date", dateStr);
-
-    const hours = (reports || []).reduce(
-      (sum, r) => sum + (Number(r.hours_worked) || 0),
-      0
-    );
-    const score =
-      reports && reports.length > 0
-        ? Math.round(
-            (reports.reduce((sum, r) => sum + (r.productivity_rating || 0), 0) /
-              reports.length) *
-              10
-          )
-        : 0;
-
-    // Habits completed
-    const { count: habits } = await supabase
-      .from("habit_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("completion_date", dateStr)
-      .eq("is_completed", true);
-
-    result.push({ day: dayName, hours, habits: habits || 0, score });
+    const rep = reportsByDate.get(dateStr);
+    result.push({
+      day: dayNames[date.getDay()],
+      hours: rep ? rep.hours : 0,
+      habits: habitsByDate.get(dateStr) || 0,
+      score: rep && rep.count > 0 ? Math.round((rep.prodSum / rep.count) * 10) : 0,
+    });
   }
 
   return result;
@@ -190,49 +189,41 @@ export async function getMonthlyTrend() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const result = [];
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - 28);
+  const windowStartStr = windowStart.toISOString().split("T")[0];
 
+  // Two range queries for the whole 4-week window, then bucket per week in
+  // memory (was ~8 sequential queries).
+  const [reportsRes, logsRes] = await Promise.all([
+    supabase.from("daily_reports").select("report_date, hours_worked, productivity_rating").eq("user_id", user.id).gte("report_date", windowStartStr),
+    supabase.from("habit_logs").select("completion_date").eq("user_id", user.id).eq("is_completed", true).gte("completion_date", windowStartStr),
+  ]);
+  const reports = reportsRes.data || [];
+  const logs = logsRes.data || [];
+
+  const result = [];
   for (let w = 3; w >= 0; w--) {
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - (w + 1) * 7);
     const weekEnd = new Date();
     weekEnd.setDate(weekEnd.getDate() - w * 7);
-
     const startStr = weekStart.toISOString().split("T")[0];
     const endStr = weekEnd.toISOString().split("T")[0];
 
-    const { data: reports } = await supabase
-      .from("daily_reports")
-      .select("hours_worked, productivity_rating")
-      .eq("user_id", user.id)
-      .gte("report_date", startStr)
-      .lt("report_date", endStr);
-
-    const hours = (reports || []).reduce(
-      (sum, r) => sum + (Number(r.hours_worked) || 0),
-      0
-    );
+    const weekReports = reports.filter((r) => r.report_date >= startStr && r.report_date < endStr);
+    const hours = weekReports.reduce((sum, r) => sum + (Number(r.hours_worked) || 0), 0);
     const score =
-      reports && reports.length > 0
-        ? Math.round(
-            reports.reduce((sum, r) => sum + (r.productivity_rating || 0), 0) /
-              reports.length * 10
-          )
+      weekReports.length > 0
+        ? Math.round((weekReports.reduce((sum, r) => sum + (r.productivity_rating || 0), 0) / weekReports.length) * 10)
         : 0;
-
-    const { count: habits } = await supabase
-      .from("habit_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("completion_date", startStr)
-      .lt("completion_date", endStr)
-      .eq("is_completed", true);
+    const habits = logs.filter((l) => l.completion_date >= startStr && l.completion_date < endStr).length;
 
     result.push({
       week: `Week ${4 - w}`,
       score,
       hours: Math.round(hours * 10) / 10,
-      habits: habits || 0,
+      habits,
     });
   }
 

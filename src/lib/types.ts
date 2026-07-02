@@ -174,6 +174,7 @@ export interface WeeklyReview {
   group_ranking: number;
   review_text?: string;
   created_at: string;
+  group_name?: string;
 }
 
 export interface AccountabilityScore {

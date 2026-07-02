@@ -1,7 +1,8 @@
 "use client";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock, Send } from "lucide-react";
+import { CheckCircle2, Clock, Send, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { getReports, addComment, addReaction } from "@/lib/dal/reports";
 import { getCurrentUser } from "@/lib/dal/auth";
@@ -104,9 +105,14 @@ export default function ReviewsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--color-text-primary)" }}>Peer Reviews</h1>
-        <p className="text-sm mt-2" style={{ color: "var(--color-text-secondary)" }}>Review your group members&apos; progress and give feedback</p>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--color-text-primary)" }}>Peer Reviews</h1>
+          <p className="text-sm mt-2" style={{ color: "var(--color-text-secondary)" }}>Review your group members&apos; progress and give feedback</p>
+        </div>
+        <Link href="/reviews/weekly" className="btn-secondary text-sm flex-shrink-0">
+          <CalendarDays className="w-4 h-4" /> Weekly Review
+        </Link>
       </motion.div>
 
       <div className="space-y-8">

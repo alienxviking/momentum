@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { getCurrentUser, updateProfile, uploadAvatar } from "@/lib/dal/auth";
-import { getDashboardStats } from "@/lib/dal/analytics";
+import { getDashboardStats, getUserAchievementStats, type AchievementStats } from "@/lib/dal/analytics";
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
+import { Achievements } from "./achievements";
 import { Flame, Target, TrendingUp, Calendar, Camera } from "lucide-react";
 import { PageSpinner, Spinner, Avatar } from "@/components/ui";
 import type { User, DashboardStats } from "@/lib/types";
@@ -12,6 +13,7 @@ import type { User, DashboardStats } from "@/lib/types";
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [achievementStats, setAchievementStats] = useState<AchievementStats | null>(null);
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -29,9 +31,10 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadProfileData() {
       try {
-        const [currentUser, dashboardStats] = await Promise.all([
+        const [currentUser, dashboardStats, achieveStats] = await Promise.all([
           getCurrentUser(),
           getDashboardStats(),
+          getUserAchievementStats(),
         ]);
         if (currentUser) {
           setUser(currentUser);
@@ -41,6 +44,7 @@ export default function ProfilePage() {
           setRemindersEnabled(currentUser.reminders_enabled ?? true);
         }
         setStats(dashboardStats);
+        setAchievementStats(achieveStats);
       } catch (err) {
         console.error("Failed to load profile", err);
         toast.error("Couldn't load your profile. Please try again.");
@@ -237,6 +241,13 @@ export default function ProfilePage() {
           </div>
         ))}
       </motion.div>
+
+      {/* Achievements */}
+      {achievementStats && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <Achievements stats={achievementStats} />
+        </motion.div>
+      )}
 
       {/* Edit Form */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-6">

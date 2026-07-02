@@ -133,6 +133,30 @@ export async function getOnboardingStatus(): Promise<{
   };
 }
 
+export interface AchievementStats {
+  groups_count: number;
+  habits_count: number;
+  reports_count: number;
+  peer_actions: number;
+  best_streak: number;
+  score: number;
+}
+
+export async function getUserAchievementStats(): Promise<AchievementStats> {
+  const empty: AchievementStats = {
+    groups_count: 0,
+    habits_count: 0,
+    reports_count: 0,
+    peer_actions: 0,
+    best_streak: 0,
+    score: 0,
+  };
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("get_user_achievement_stats");
+  if (error || !data || !data[0]) return empty;
+  return data[0] as AchievementStats;
+}
+
 export async function getWeeklyProductivity() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

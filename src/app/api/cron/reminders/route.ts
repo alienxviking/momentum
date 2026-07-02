@@ -64,7 +64,8 @@ export async function GET(request: Request) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
-  const supabase = createClient(supabaseUrl, serviceKey);
+  // Non-null: the `missing` check above guarantees these are set.
+  const supabase = createClient(supabaseUrl!, serviceKey!);
 
   const { data, error } = await supabase.rpc("users_needing_reminder");
   if (error) {

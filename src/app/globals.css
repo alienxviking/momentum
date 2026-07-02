@@ -84,6 +84,14 @@ body {
   min-height: 100vh;
 }
 
+/* Native buttons default to an arrow cursor under Tailwind v4 Preflight —
+   restore the pointer for anything clickable. */
+button:not(:disabled),
+label[role="button"],
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
 /* Theme transition — applied only for the brief moment of a toggle (via a
    class added by ThemeProvider) so it never overrides component hover timings. */
 html.theme-transitioning,

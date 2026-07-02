@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, themeInitScript } from "@/lib/theme";
@@ -21,6 +21,15 @@ export const metadata: Metadata = {
     "study group",
     "fitness accountability",
   ],
+  appleWebApp: {
+    capable: true,
+    title: "Momentum",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#050a08",
 };
 
 export default function RootLayout({

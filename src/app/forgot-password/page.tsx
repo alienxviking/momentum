@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Zap, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoMark } from "@/components/logo-mark";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -43,7 +44,7 @@ export default function ForgotPasswordPage() {
       </div>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <div className="flex items-center gap-2 mb-8">
-          <Zap className="w-6 h-6" fill="currentColor" style={{ color: "var(--color-accent-primary)" }} />
+          <LogoMark className="w-6 h-6" />
           <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
         </div>
         {sent ? (

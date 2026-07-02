@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoMark } from "@/components/logo-mark";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -59,7 +60,7 @@ export default function LoginPage() {
         <div className="absolute bottom-1/4 right-1/4 w-56 h-56 rounded-full opacity-20 blur-3xl" style={{ background: "#06b6d4" }} />
         <div className="relative z-10 max-w-md">
           <div className="flex items-center gap-3 mb-8">
-            <Zap className="w-9 h-9" fill="currentColor" style={{ color: "var(--color-accent-primary)" }} />
+            <LogoMark className="w-9 h-9" />
             <span className="text-3xl font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
           </div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--color-text-primary)" }}>Welcome back, achiever.</h2>
@@ -81,7 +82,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <Zap className="w-6 h-6" fill="currentColor" style={{ color: "var(--color-accent-primary)" }} />
+            <LogoMark className="w-6 h-6" />
             <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
           </div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>Log in to your account</h1>

@@ -11,11 +11,11 @@ import {
   MessageSquare,
   ArrowRight,
   CheckCircle2,
-  Zap,
   Shield,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Aurora } from "@/components/aurora";
+import { LogoMark } from "@/components/logo-mark";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -84,7 +84,7 @@ export default function LandingPage() {
       }}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-decoration-none">
-            <Zap className="w-6 h-6" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
+            <LogoMark className="w-6 h-6" />
             <span className="text-xl font-bold" style={{ color: "var(--color-text-primary)" }}>
               Momentum
             </span>
@@ -340,7 +340,7 @@ export default function LandingPage() {
       }}>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
+            <LogoMark className="w-5 h-5" />
             <span className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
           </div>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>

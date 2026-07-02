@@ -4,13 +4,14 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Users, Target, TrendingUp, MessageSquare,
-  BarChart3, Bell, Zap, ChevronLeft, ChevronRight, LogOut,
+  BarChart3, Bell, ChevronLeft, ChevronRight, LogOut,
   Menu, X,
 } from "lucide-react";
 import { getCurrentUser, signOut } from "@/lib/dal/auth";
 import { getUnreadCount } from "@/lib/dal/notifications";
 import type { User } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoMark } from "@/components/logo-mark";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -77,13 +78,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="h-16 flex items-center justify-between px-4 border-b" style={{ borderColor: "var(--color-border-subtle)" }}>
           {!collapsed && (
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Zap className="w-6 h-6" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
+              <LogoMark className="w-6 h-6" />
               <span className="text-lg font-bold" style={{ color: "var(--color-text-primary)" }}>Momentum</span>
             </Link>
           )}
           {collapsed && (
             <div className="w-8 h-8 flex items-center justify-center mx-auto">
-              <Zap className="w-6 h-6" style={{ color: "var(--color-accent-primary)" }} fill="currentColor" />
+              <LogoMark className="w-6 h-6" />
             </div>
           )}
           <button onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="hidden lg:flex p-1 rounded-md transition-colors" style={{ color: "var(--color-text-muted)" }}>

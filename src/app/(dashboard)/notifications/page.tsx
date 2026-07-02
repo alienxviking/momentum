@@ -22,19 +22,18 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const unread = notifications.filter((n) => !n.is_read).length;
 
-  async function loadNotifications() {
-    try {
-      const data = await getNotifications();
-      setNotifications(data);
-    } catch (err) {
-      console.error("Failed to load notifications", err);
-      toast.error("Couldn't load notifications. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const data = await getNotifications();
+        setNotifications(data);
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+        toast.error("Couldn't load notifications. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
     loadNotifications();
   }, []);
 

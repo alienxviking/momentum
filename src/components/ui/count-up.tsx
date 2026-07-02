@@ -26,20 +26,20 @@ export function CountUp({
   className,
 }: CountUpProps) {
   const reduced = useReducedMotion();
-  const [display, setDisplay] = useState(reduced ? value : 0);
+  const [animated, setAnimated] = useState(0);
 
   useEffect(() => {
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
+    if (reduced) return;
     const controls = animate(0, value, {
       duration,
       ease: [0.16, 1, 0.3, 1],
-      onUpdate: (v) => setDisplay(v),
+      onUpdate: (v) => setAnimated(v),
     });
     return () => controls.stop();
   }, [value, duration, reduced]);
+
+  // When motion is reduced, snap straight to the final value (no state churn).
+  const display = reduced ? value : animated;
 
   return (
     <span className={className}>

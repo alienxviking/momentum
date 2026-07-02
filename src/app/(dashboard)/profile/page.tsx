@@ -63,10 +63,11 @@ export default function ProfilePage() {
       if (user) {
         setUser({ ...user, full_name: fullName, username, bio });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to update profile.");
-      toast.error(err.message || "Couldn't update your profile. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to update profile.";
+      setError(message);
+      toast.error(message || "Couldn't update your profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -93,10 +94,11 @@ export default function ProfilePage() {
       }
       setSuccess("Profile picture updated successfully!");
       toast.success("Profile picture updated!");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to upload profile picture.");
-      toast.error(err.message || "Couldn't upload your profile picture. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to upload profile picture.";
+      setError(message);
+      toast.error(message || "Couldn't upload your profile picture. Please try again.");
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {

@@ -31,7 +31,9 @@ export function useChartTheme(): ChartTheme {
   const [t, setT] = useState<ChartTheme>(() => compute());
 
   useEffect(() => {
-    // Recompute after the theme attribute + transition have applied.
+    // Must run post-commit: compute() reads resolved CSS custom properties from
+    // the DOM, which only reflect the new theme after the attribute is applied.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setT(compute());
   }, [theme]);
 

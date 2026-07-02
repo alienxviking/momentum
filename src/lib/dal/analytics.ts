@@ -221,7 +221,7 @@ export async function getLeaderboard(groupId: string): Promise<LeaderboardEntry[
   if (!members) return [];
 
   const entries: LeaderboardEntry[] = members.map((m, i) => {
-    const p = m.profiles as any;
+    const p = m.profiles as unknown as Record<string, unknown> | null;
     return {
       rank: i + 1,
       user: {

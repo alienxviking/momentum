@@ -1,9 +1,30 @@
 import { createClient } from "@/lib/supabase/client";
-import type { DailyReport, Comment, EvidenceUpload } from "@/lib/types";
+import type { DailyReport, Comment, EvidenceUpload, FeedbackType, ReactionType } from "@/lib/types";
 
 // Evidence lives in a private bucket; rows store the storage path in `file_url`.
 // Signed URLs are short-lived so evidence isn't publicly reachable.
 const EVIDENCE_URL_TTL = 60 * 60; // 1 hour
+
+// Shapes of the raw joined rows returned by Supabase selects below.
+interface RawComment {
+  id: string;
+  report_id: string;
+  user_id: string;
+  parent_id: string | null;
+  content: string;
+  feedback_type: FeedbackType | null;
+  created_at: string;
+  updated_at: string;
+  profiles: unknown;
+}
+
+interface RawReaction {
+  id: string;
+  report_id: string;
+  user_id: string;
+  reaction_type: ReactionType;
+  created_at: string;
+}
 
 export async function getReports(groupId?: string): Promise<DailyReport[]> {
   const supabase = createClient();
@@ -26,7 +47,7 @@ export async function getReports(groupId?: string): Promise<DailyReport[]> {
   const mapped = reports.map((r) => {
     const p = r.profiles as Record<string, unknown>;
     
-    const rawComments = (r.comments || []) as any[];
+    const rawComments = (r.comments || []) as RawComment[];
     const parentComments = rawComments.filter((c) => !c.parent_id);
     const commentReplies = rawComments.filter((c) => c.parent_id);
 
@@ -40,7 +61,7 @@ export async function getReports(groupId?: string): Promise<DailyReport[]> {
             id: reply.id,
             report_id: reply.report_id,
             user_id: reply.user_id,
-            parent_id: reply.parent_id,
+            parent_id: reply.parent_id ?? undefined,
             content: reply.content,
             feedback_type: reply.feedback_type || "general",
             created_at: reply.created_at,
@@ -86,7 +107,7 @@ export async function getReports(groupId?: string): Promise<DailyReport[]> {
       };
     });
 
-    const reactionsList = (r.reactions || []).map((rx: any) => ({
+    const reactionsList = ((r.reactions || []) as RawReaction[]).map((rx) => ({
       id: rx.id,
       report_id: rx.report_id,
       user_id: rx.user_id,

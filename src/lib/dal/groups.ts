@@ -96,7 +96,7 @@ export async function getGroupMembers(groupId: string): Promise<User[]> {
   if (!members) return [];
 
   return members.map((m) => {
-    const p = m.profiles as any;
+    const p = m.profiles as unknown as Record<string, unknown> | null;
     return {
       id: (p?.id as string) || m.user_id,
       email: "",

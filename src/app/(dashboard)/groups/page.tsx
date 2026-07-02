@@ -47,16 +47,17 @@ export default function GroupsPage() {
     setJoinSuccess("");
 
     try {
-      const groupId = await joinGroupByInvite(inviteCode.trim());
+      await joinGroupByInvite(inviteCode.trim());
       setJoinSuccess("Successfully joined group!");
       toast.success("Successfully joined group!");
       setInviteCode("");
       // Refresh groups list
       const myGroups = await getMyGroups();
       setGroups(myGroups);
-    } catch (err: any) {
-      setJoinError(err.message || "Failed to join group.");
-      toast.error(err.message || "Failed to join group.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to join group.";
+      setJoinError(message);
+      toast.error(message);
     } finally {
       setJoining(false);
     }

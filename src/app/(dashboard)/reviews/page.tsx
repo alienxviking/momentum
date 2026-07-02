@@ -16,23 +16,22 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [submittingComment, setSubmittingComment] = useState<Record<string, boolean>>({});
 
-  async function loadData() {
-    try {
-      const [reportsData, userData] = await Promise.all([
-        getReports(),
-        getCurrentUser()
-      ]);
-      setReports(reportsData);
-      setCurrentUser(userData);
-    } catch (err) {
-      console.error("Failed to load reviews data", err);
-      toast.error("Couldn't load reviews. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
+    async function loadData() {
+      try {
+        const [reportsData, userData] = await Promise.all([
+          getReports(),
+          getCurrentUser()
+        ]);
+        setReports(reportsData);
+        setCurrentUser(userData);
+      } catch (err) {
+        console.error("Failed to load reviews data", err);
+        toast.error("Couldn't load reviews. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
     loadData();
   }, []);
 

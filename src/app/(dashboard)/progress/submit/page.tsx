@@ -72,10 +72,11 @@ export default function SubmitReportPage() {
       });
       toast.success("Progress submitted! 🎉");
       router.push("/progress");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to submit report. Please try again.");
-      toast.error(err.message || "Failed to submit report. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to submit report. Please try again.";
+      setError(message);
+      toast.error(message);
       setLoading(false);
     }
   };

@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
+  const [emailReminders, setEmailReminders] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -33,6 +34,7 @@ export default function ProfilePage() {
           setFullName(currentUser.full_name);
           setUsername(currentUser.username);
           setBio(currentUser.bio || "");
+          setEmailReminders(currentUser.email_reminders ?? true);
         }
         setStats(dashboardStats);
       } catch (err) {
@@ -104,6 +106,19 @@ export default function ProfilePage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleToggleReminders = async () => {
+    const next = !emailReminders;
+    setEmailReminders(next);
+    try {
+      await updateProfile({ email_reminders: next });
+      toast.success(next ? "Daily email reminders on." : "Daily email reminders off.");
+    } catch (err) {
+      console.error(err);
+      setEmailReminders(!next);
+      toast.error("Couldn't update your reminder preference. Please try again.");
     }
   };
 
@@ -220,6 +235,32 @@ export default function ProfilePage() {
             {saving ? "Saving Changes..." : "Save Changes"}
           </button>
         </form>
+      </motion.div>
+
+      {/* Notifications */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card p-6">
+        <h2 className="text-base font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>Notifications</h2>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>Daily email reminders</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+              Get a nudge by email on days you haven&apos;t logged your progress.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={emailReminders}
+            onClick={handleToggleReminders}
+            className="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors"
+            style={{ background: emailReminders ? "var(--color-accent-primary)" : "var(--color-bg-tertiary)", border: "1px solid var(--color-border-default)" }}
+          >
+            <span
+              className="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+              style={{ transform: emailReminders ? "translateX(22px)" : "translateX(3px)", marginTop: "3px" }}
+            />
+          </button>
+        </div>
       </motion.div>
     </div>
   );

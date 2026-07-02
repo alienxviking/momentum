@@ -25,13 +25,14 @@ export async function getCurrentUser(): Promise<User | null> {
     avatar_url: profile.avatar_url || "",
     bio: profile.bio || "",
     accountability_score: profile.accountability_score || 50,
+    email_reminders: profile.email_reminders ?? true,
     created_at: profile.created_at,
     updated_at: profile.updated_at,
   };
 }
 
 export async function updateProfile(
-  data: Partial<{ full_name: string; username: string; bio: string; avatar_url: string }>
+  data: Partial<{ full_name: string; username: string; bio: string; avatar_url: string; email_reminders: boolean }>
 ) {
   const supabase = createClient();
   const {

@@ -11,6 +11,7 @@ import {
 import { getCurrentUser, signOut } from "@/lib/dal/auth";
 import { getUnreadCount, maybeCreateDailyReminder } from "@/lib/dal/notifications";
 import { ensureWeeklyReviews } from "@/lib/dal/weekly";
+import { recalculateMyScore } from "@/lib/dal/analytics";
 import { joinGroupByInvite } from "@/lib/dal/groups";
 import { useUserStore } from "@/lib/user-store";
 import { useGroupsStore } from "@/lib/groups-store";
@@ -44,6 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     useUserStore.persist.rehydrate();
 
+    void recalculateMyScore();
     void maybeCreateDailyReminder();
     void ensureWeeklyReviews().finally(() => {
       // Reflect any freshly-created notification in the badge.

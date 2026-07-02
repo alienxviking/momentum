@@ -7,84 +7,62 @@ export async function getHabits(): Promise<Habit[]> {
   if (!user) return [];
 
   const today = new Date().toISOString().split("T")[0];
+  const streakStart = new Date();
+  streakStart.setDate(streakStart.getDate() - 60);
+  const streakStartStr = streakStart.toISOString().split("T")[0];
 
-  // Get habits
-  const { data: habits } = await supabase
-    .from("habits")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
+  // Fetch habits, today's completions, and the last 60 days of completed logs
+  // all at once — streaks are then computed in memory (was one query per habit).
+  const [habitsRes, todayRes, logsRes] = await Promise.all([
+    supabase.from("habits").select("*").eq("user_id", user.id).eq("is_active", true).order("created_at", { ascending: true }),
+    supabase.from("habit_logs").select("habit_id").eq("user_id", user.id).eq("completion_date", today).eq("is_completed", true),
+    supabase.from("habit_logs").select("habit_id, completion_date").eq("user_id", user.id).eq("is_completed", true).gte("completion_date", streakStartStr),
+  ]);
 
+  const habits = habitsRes.data;
   if (!habits) return [];
 
-  // Get today's logs
-  const { data: todayLogs } = await supabase
-    .from("habit_logs")
-    .select("habit_id")
-    .eq("user_id", user.id)
-    .eq("completion_date", today)
-    .eq("is_completed", true);
+  const completedIds = new Set((todayRes.data || []).map((l) => l.habit_id));
 
-  const completedIds = new Set((todayLogs || []).map((l) => l.habit_id));
+  // Group completion dates by habit for in-memory streak computation.
+  const datesByHabit = new Map<string, Set<string>>();
+  (logsRes.data || []).forEach((l) => {
+    if (!datesByHabit.has(l.habit_id)) datesByHabit.set(l.habit_id, new Set());
+    datesByHabit.get(l.habit_id)!.add(l.completion_date);
+  });
 
-  // Compute streaks for each habit
-  const habitsWithMeta: Habit[] = await Promise.all(
-    habits.map(async (h) => {
-      const streak = await computeStreak(h.id, user.id);
-      return {
-        id: h.id,
-        user_id: h.user_id,
-        name: h.name,
-        category: h.category || "",
-        frequency: h.frequency || "daily",
-        color: h.color || "#059669",
-        icon: h.icon || "✅",
-        start_date: h.start_date,
-        is_active: h.is_active,
-        created_at: h.created_at,
-        streak,
-        completed_today: completedIds.has(h.id),
-      };
-    })
-  );
-
-  return habitsWithMeta;
-}
-
-async function computeStreak(habitId: string, userId: string): Promise<number> {
-  const supabase = createClient();
-  const { data: logs } = await supabase
-    .from("habit_logs")
-    .select("completion_date")
-    .eq("habit_id", habitId)
-    .eq("user_id", userId)
-    .eq("is_completed", true)
-    .order("completion_date", { ascending: false })
-    .limit(60);
-
-  if (!logs || logs.length === 0) return 0;
-
-  let streak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < 60; i++) {
-    const checkDate = new Date(today);
-    checkDate.setDate(checkDate.getDate() - i);
-    const dateStr = checkDate.toISOString().split("T")[0];
-
-    if (logs.some((l) => l.completion_date === dateStr)) {
-      streak++;
-    } else if (i === 0) {
-      // Today not done yet, that's ok — start counting from yesterday
-      continue;
-    } else {
-      break;
+  const streakFor = (dates: Set<string> | undefined): number => {
+    if (!dates || dates.size === 0) return 0;
+    let streak = 0;
+    for (let i = 0; i < 60; i++) {
+      const checkDate = new Date();
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = checkDate.toISOString().split("T")[0];
+      if (dates.has(dateStr)) {
+        streak++;
+      } else if (i === 0) {
+        continue; // today not done yet
+      } else {
+        break;
+      }
     }
-  }
+    return streak;
+  };
 
-  return streak;
+  return habits.map((h) => ({
+    id: h.id,
+    user_id: h.user_id,
+    name: h.name,
+    category: h.category || "",
+    frequency: h.frequency || "daily",
+    color: h.color || "#059669",
+    icon: h.icon || "✅",
+    start_date: h.start_date,
+    is_active: h.is_active,
+    created_at: h.created_at,
+    streak: streakFor(datesByHabit.get(h.id)),
+    completed_today: completedIds.has(h.id),
+  }));
 }
 
 export async function createHabit(data: {

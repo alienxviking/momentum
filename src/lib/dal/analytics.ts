@@ -16,32 +16,31 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
 
   const today = new Date().toISOString().split("T")[0];
+  const streakStart = new Date();
+  streakStart.setDate(streakStart.getDate() - 60);
+  const streakStartStr = streakStart.toISOString().split("T")[0];
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekStr = weekAgo.toISOString().split("T")[0];
 
-  // Total active habits
-  const { count: totalHabits } = await supabase
-    .from("habits")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("is_active", true);
+  // All independent — run them in parallel instead of one after another.
+  // (The accountability score is kept fresh by activity triggers + a
+  // once-per-session recompute, so it's just read here, not recomputed.)
+  const [totalRes, completedRes, todayRes, streakRes, weeklyRes, profileRes] = await Promise.all([
+    supabase.from("habits").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_active", true),
+    supabase.from("habit_logs").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("completion_date", today).eq("is_completed", true),
+    supabase.from("daily_reports").select("tasks_completed").eq("user_id", user.id).eq("report_date", today),
+    supabase.from("habit_logs").select("completion_date").eq("user_id", user.id).eq("is_completed", true).gte("completion_date", streakStartStr),
+    supabase.from("habit_logs").select("*", { count: "exact", head: true }).eq("user_id", user.id).gte("completion_date", weekStr).eq("is_completed", true),
+    supabase.from("profiles").select("accountability_score").eq("id", user.id).single(),
+  ]);
 
-  // Habits completed today
-  const { count: completedHabits } = await supabase
-    .from("habit_logs")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("completion_date", today)
-    .eq("is_completed", true);
-
-  // Today's report tasks
-  const { data: todayReports } = await supabase
-    .from("daily_reports")
-    .select("tasks_completed")
-    .eq("user_id", user.id)
-    .eq("report_date", today);
+  const totalHabits = totalRes.count;
+  const completedHabits = completedRes.count;
 
   let tasksTotal = 0;
   let tasksCompleted = 0;
-  (todayReports || []).forEach((r) => {
+  (todayRes.data || []).forEach((r) => {
     const tasks = r.tasks_completed as { completed: boolean }[];
     if (Array.isArray(tasks)) {
       tasksTotal += tasks.length;
@@ -49,25 +48,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }
   });
 
-  // Compute streak (consecutive days with at least one habit logged).
-  // Fetch the last 60 days of completion dates once, then count in memory —
-  // was previously 60 sequential queries.
-  const streakStart = new Date();
-  streakStart.setDate(streakStart.getDate() - 60);
-  const { data: streakLogs } = await supabase
-    .from("habit_logs")
-    .select("completion_date")
-    .eq("user_id", user.id)
-    .eq("is_completed", true)
-    .gte("completion_date", streakStart.toISOString().split("T")[0]);
-
-  const completedDays = new Set((streakLogs || []).map((l) => l.completion_date));
+  // Streak: consecutive days (ending today/yesterday) with a completed habit.
+  const completedDays = new Set((streakRes.data || []).map((l) => l.completion_date));
   let streak = 0;
   for (let i = 0; i < 60; i++) {
     const checkDate = new Date();
     checkDate.setDate(checkDate.getDate() - i);
     const dateStr = checkDate.toISOString().split("T")[0];
-
     if (completedDays.has(dateStr)) {
       streak++;
     } else if (i === 0) {
@@ -77,33 +64,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }
   }
 
-  // Weekly consistency: habits completed / total possible in last 7 days
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekStr = weekAgo.toISOString().split("T")[0];
-
-  const { count: weeklyCompleted } = await supabase
-    .from("habit_logs")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("completion_date", weekStr)
-    .eq("is_completed", true);
-
   const weeklyPossible = (totalHabits || 0) * 7;
   const weeklyConsistency =
     weeklyPossible > 0
-      ? Math.round(((weeklyCompleted || 0) / weeklyPossible) * 100)
+      ? Math.round(((weeklyRes.count || 0) / weeklyPossible) * 100)
       : 0;
 
-  // Recompute the caller's accountability score from the trailing 30 days
-  // (also applies decay when they've been inactive), then read it back.
-  await supabase.rpc("recalculate_accountability_score");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("accountability_score")
-    .eq("id", user.id)
-    .single();
+  const profile = profileRes.data;
 
   return {
     current_streak: streak,
@@ -114,6 +81,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     weekly_consistency: weeklyConsistency,
     accountability_score: profile?.accountability_score || 50,
   };
+}
+
+// Recomputes the caller's accountability score (applies inactivity decay).
+// Called once per app load in the background — activity triggers keep it fresh
+// the rest of the time, so it no longer runs on every dashboard read.
+export async function recalculateMyScore() {
+  const supabase = createClient();
+  await supabase.rpc("recalculate_accountability_score");
 }
 
 export async function getOnboardingStatus(): Promise<{
